@@ -1,0 +1,18 @@
+# Environnement virtuel
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# VS Code
+.vscode/
+.DS_Store
+
+# Modèles (gros fichiers)
+*.model
+*.bin
