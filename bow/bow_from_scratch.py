@@ -1,5 +1,6 @@
 import math
 
+    # Pour lancer le script : python bow/bow_from_scratch.py
 
 def create_vocabulary(documents):
     all_words = []
