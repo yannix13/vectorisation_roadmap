@@ -6,14 +6,16 @@
 
 ---
 
-## 📅 SEMAINE 1 : Bag of Words (BoW)
+<details>
+<summary><strong>📅 SEMAINE 1 : Bag of Words (BoW)</strong></summary>
 
 ### 🎯 Objectif de la semaine
 Comprendre la méthode la plus simple pour transformer texte → vecteur
 
 ---
 
-### JOUR 1 : Théorie + Compréhension conceptuelle
+<details>
+<summary>JOUR 1 : Théorie + Compréhension conceptuelle</summary>
 
 #### 📖 Concepts à maîtriser
 
@@ -105,9 +107,12 @@ Avec le vocabulaire ci-dessus, transforme en vecteurs :
 
 Quelle paire de documents est la plus similaire ? Calcule manuellement la similarité cosinus.
 
+</details>
+
 ---
 
-### JOUR 2-3 : Implémentation de base (à la main)
+<details>
+<summary>JOUR 2-3 : Implémentation de base (à la main)</summary>
 
 #### 💻 Projet : Coder BoW sans librairie
 
@@ -260,9 +265,12 @@ Tu dois avoir :
 - ✓ Compris chaque ligne de code que tu as écrite
 - ✓ Vérifié que la similarité donne des résultats cohérents
 
+</details>
+
 ---
 
-### JOUR 4-5 : Mini moteur de recherche v0.1
+<details>
+<summary>JOUR 4-5 : Mini moteur de recherche v0.1</summary>
 
 #### 💻 Projet : Premier moteur de recherche
 
@@ -388,9 +396,12 @@ Tu dois avoir :
 - ✓ Noté les forces et faiblesses de BoW
 - ✓ Liste de ce qui pourrait être amélioré
 
+</details>
+
 ---
 
-### JOUR 6-7 : Optimisation et expérimentation
+<details>
+<summary>JOUR 6-7 : Optimisation et expérimentation</summary>
 
 #### 🔬 Améliorations à tester
 
@@ -554,9 +565,11 @@ def interactive_search():
             print("Commande inconnue")
 ```
 
+</details>
+
 ---
 
-#### ✅ Checkpoint Semaine 1
+### ✅ Checkpoint Semaine 1
 
 **Compétences acquises :**
 
@@ -572,9 +585,12 @@ def interactive_search():
 2. Quels types de requêtes fonctionnent mal avec BoW ?
 3. Comment pourrait-on améliorer BoW ?
 
+</details>
+
 ---
 
-## 📅 SEMAINE 2 : TF-IDF
+<details>
+<summary><strong>📅 SEMAINE 2 : TF-IDF</strong></summary>
 
 ### 🎯 Objectif de la semaine
 
@@ -582,7 +598,8 @@ Comprendre comment valoriser les mots importants et réduire l'impact des mots c
 
 ---
 
-### JOUR 1 : Comprendre TF-IDF
+<details>
+<summary>JOUR 1 : Comprendre TF-IDF</summary>
 
 #### 📖 Concepts à maîtriser
 
@@ -714,9 +731,12 @@ TF-IDF(chat, Doc1) = 0.5 × 0.693 = 0.347
 
 </details>
 
+</details>
+
 ---
 
-### JOUR 2-3 : Implémentation de TF-IDF
+<details>
+<summary>JOUR 2-3 : Implémentation de TF-IDF</summary>
 
 #### 💻 Projet : Coder TF-IDF from scratch
 
@@ -910,9 +930,12 @@ Tu dois avoir :
 - ✓ Comparaison des scores TF vs TF-IDF
 - ✓ Vérification que les mots courants ont des scores faibles
 
+</details>
+
 ---
 
-### JOUR 4-5 : Moteur de recherche v0.2
+<details>
+<summary>JOUR 4-5 : Moteur de recherche v0.2</summary>
 
 #### 💻 Projet : Améliorer le moteur avec TF-IDF
 
@@ -1058,9 +1081,12 @@ Tu dois avoir :
 - ✓ Compris pourquoi TF-IDF est meilleur
 - ✓ Identifié ce qui reste à améliorer
 
+</details>
+
 ---
 
-### JOUR 6-7 : sklearn et optimisations
+<details>
+<summary>JOUR 6-7 : sklearn et optimisations</summary>
 
 #### 💻 Utiliser sklearn (la bonne façon)
 
@@ -1313,9 +1339,11 @@ print("\nsklearn implementation:")
 benchmark_search(sklearn_engine, test_queries)
 ```
 
+</details>
+
 ---
 
-#### ✅ Checkpoint Semaine 2
+### ✅ Checkpoint Semaine 2
 
 **Compétences acquises :**
 
@@ -1331,9 +1359,12 @@ benchmark_search(sklearn_engine, test_queries)
 2. Quelles limites restent malgré TF-IDF ?
 3. Comment gérer les synonymes et la polysémie ?
 
+</details>
+
 ---
 
-## 📅 SEMAINE 3 : Word2Vec
+<details>
+<summary><strong>📅 SEMAINE 3 : Word2Vec</strong></summary>
 
 ### 🎯 Objectif de la semaine
 
@@ -1341,7 +1372,8 @@ Comprendre les word embeddings : représentations vectorielles denses qui captur
 
 ---
 
-### JOUR 1 : Théorie des word embeddings
+<details>
+<summary>JOUR 1 : Théorie des word embeddings</summary>
 
 #### 📖 Concepts à maîtriser
 
@@ -1510,9 +1542,12 @@ Propriété : Les relations sémantiques sont des translations dans l'espace vec
 
 </details>
 
+</details>
+
 ---
 
-### JOUR 2 : Utiliser Word2Vec (gensim)
+<details>
+<summary>JOUR 2 : Utiliser Word2Vec (gensim)</summary>
 
 #### 💻 Premier contact avec gensim
 
@@ -1628,7 +1663,6 @@ def train_word2vec(sentences, **params):
 # Utilisation
 if __name__ == "__main__":
     # Charger données
-    # (Utilise n'importe quel fichier texte - roman, articles, etc.)
     sentences = load_and_preprocess_text("mon_corpus.txt")
     
     print(f"Chargé {len(sentences)} phrases")
@@ -1747,9 +1781,12 @@ Tu dois avoir :
 - ✓ Exploré similarités et analogies
 - ✓ Compris la magie des embeddings !
 
+</details>
+
 ---
 
-### JOUR 3-4 : Moteur de recherche v0.3
+<details>
+<summary>JOUR 3-4 : Moteur de recherche v0.3</summary>
 
 #### 💻 Intégrer Word2Vec dans le moteur
 
@@ -1790,12 +1827,6 @@ class Word2VecSearchEngine:
     def document_to_vector(self, document):
         """
         Transforme un document en vecteur (moyenne des mots)
-        
-        Args:
-            document: string
-        
-        Returns:
-            numpy array (vecteur du document)
         """
         words = document.lower().split()
         
@@ -1807,7 +1838,6 @@ class Word2VecSearchEngine:
         
         # Moyenne
         if len(word_vectors) == 0:
-            # Document vide ou aucun mot connu
             return np.zeros(self.model.vector_size)
         
         return np.mean(word_vectors, axis=0)
@@ -1815,13 +1845,6 @@ class Word2VecSearchEngine:
     def document_to_vector_tfidf_weighted(self, document, tfidf_scores):
         """
         Transforme un document en vecteur (moyenne pondérée par TF-IDF)
-        
-        Args:
-            document: string
-            tfidf_scores: dict {word: tfidf_score}
-        
-        Returns:
-            numpy array
         """
         words = document.lower().split()
         
@@ -1842,13 +1865,6 @@ class Word2VecSearchEngine:
     def search(self, query, top_k=5):
         """
         Recherche avec Word2Vec
-        
-        Args:
-            query: string
-            top_k: nombre de résultats
-        
-        Returns:
-            liste de (doc_index, score)
         """
         # Vectoriser la requête
         query_vector = self.document_to_vector(query)
@@ -1856,7 +1872,6 @@ class Word2VecSearchEngine:
         # Calculer similarités
         similarities = []
         for i, doc_vec in enumerate(self.doc_vectors):
-            # Similarité cosinus
             sim = np.dot(query_vector, doc_vec) / (
                 np.linalg.norm(query_vector) * np.linalg.norm(doc_vec) + 1e-8
             )
@@ -1880,7 +1895,6 @@ class Word2VecSearchEngine:
         print("\nMots de la requête:")
         for word in words:
             if word in self.model.wv:
-                # Mots similaires
                 similars = self.model.wv.most_similar(word, topn=3)
                 print(f"  {word}:")
                 for sim_word, score in similars:
@@ -1891,7 +1905,6 @@ class Word2VecSearchEngine:
 
 # Test
 if __name__ == "__main__":
-    # Corpus
     documents = [
         "Le chat dort paisiblement sur le canapé",
         "Le chien aboie fort dans le jardin",
@@ -1999,8 +2012,6 @@ class Doc2VecSearchEngine:
 
 # Comparaison Word2Vec vs Doc2Vec
 if __name__ == "__main__":
-    # (même corpus)
-    
     print("\n=== Word2Vec ===")
     w2v_engine = Word2VecSearchEngine(documents, w2v_model)
     w2v_results = w2v_engine.search("kitten programming", top_k=3)
@@ -2034,9 +2045,12 @@ Tu dois avoir :
 - TF-IDF est plus précis pour mots-clés exacts
 - → Idée : combiner les deux ! (jour suivant)
 
+</details>
+
 ---
 
-### JOUR 5 : Visualisation et compréhension
+<details>
+<summary>JOUR 5 : Visualisation et compréhension</summary>
 
 #### 📊 Visualiser l'espace vectoriel
 
@@ -2104,7 +2118,6 @@ def visualize_similarity_matrix(model, words):
     """
     Heatmap des similarités entre mots
     """
-    # Matrice de similarité
     n = len(words)
     sim_matrix = np.zeros((n, n))
     
@@ -2160,7 +2173,6 @@ def explore_word_neighborhood(model, word, topn=20):
 
 # Tests
 if __name__ == "__main__":
-    # Charger modèle
     model = Word2Vec.load("my_word2vec.model")
     
     # Test 1 : Comparer animaux, émotions, actions
@@ -2187,11 +2199,6 @@ if __name__ == "__main__":
 def test_analogy(model, a, b, c, expected=None):
     """
     Teste une analogie : a - b + c ≈ ?
-    
-    Args:
-        model: Word2Vec model
-        a, b, c: mots de l'analogie
-        expected: réponse attendue (optionnel)
     """
     try:
         result = model.wv.most_similar(
@@ -2208,7 +2215,6 @@ def test_analogy(model, a, b, c, expected=None):
             print(f"{marker} {i}. {word:15s} (score: {score:.3f})")
         
         if expected:
-            # Vérifier si présent dans top 5
             top_words = [w for w, _ in result]
             if expected in top_words:
                 rank = top_words.index(expected) + 1
@@ -2254,7 +2260,6 @@ def comprehensive_analogy_test(model):
 
 # Test
 if __name__ == "__main__":
-    # Charger modèle pré-entraîné
     import gensim.downloader as api
     model = api.load("word2vec-google-news-300")
     
@@ -2272,9 +2277,12 @@ Tu dois avoir :
 - ✓ Testé des analogies
 - ✓ Vu les limites de Word2Vec sur petit corpus
 
+</details>
+
 ---
 
-### JOUR 6-7 : Récapitulatif et questions
+<details>
+<summary>JOUR 6-7 : Récapitulatif et questions</summary>
 
 #### 🤔 Questions de compréhension
 
@@ -2337,9 +2345,12 @@ Tu dois avoir :
 
 </details>
 
+</details>
+
 ---
 
-### JOUR 3-5 : Projet final intégrateur
+<details>
+<summary>JOUR 3-5 : Projet final intégrateur</summary>
 
 #### 💻 Grand projet : Moteur de recherche hybride
 
@@ -2402,7 +2413,6 @@ class HybridSearchEngine:
         """
         Recherche avec explication détaillée des scores
         """
-        # Scores individuels
         tfidf_results = self.tfidf_engine.search(query, top_k=top_k)
         w2v_results = self.w2v_engine.search(query, top_k=top_k)
         hybrid_results = self.search(query, top_k=top_k, alpha=alpha)
@@ -2412,7 +2422,6 @@ class HybridSearchEngine:
         print("="*70)
         
         for rank, (doc_idx, final_score) in enumerate(hybrid_results, 1):
-            # Trouver les scores individuels
             tfidf_score = next((s for i, s in tfidf_results if i == doc_idx), 0)
             w2v_score = next((s for i, s in w2v_results if i == doc_idx), 0)
             
@@ -2425,12 +2434,8 @@ class HybridSearchEngine:
 
 # Test du moteur hybride
 if __name__ == "__main__":
-    # (même corpus que avant)
-    
-    # Créer moteur hybride
     hybrid_engine = HybridSearchEngine(documents, w2v_model)
     
-    # Tester avec différents alpha
     query = "kitten"
     
     print("\nAlpha = 0 (100% Word2Vec)")
@@ -2486,9 +2491,12 @@ import streamlit as st
 # Heatmap des similarités
 ```
 
+</details>
+
 ---
 
-### JOUR 6-7 : Documentation et réflexion
+<details>
+<summary>JOUR 6-7 : Documentation et réflexion</summary>
 
 #### 📝 Créer un document récapitulatif
 
@@ -2533,6 +2541,10 @@ import streamlit as st
 **Question 3 :** Quelles questions te restes-tu ?
 
 **Question 4 :** Es-tu prêt pour la suite (Transformers, LLM) ?
+
+</details>
+
+</details>
 
 ---
 

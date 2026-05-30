@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture LLM — Du token au modèle</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    h1 {
+      font-size: 2.2rem;
+      color: #a78bfa;
+      margin-bottom: 8px;
+      border-bottom: 2px solid #a78bfa33;
+      padding-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      color: #60a5fa;
+      margin: 48px 0 16px;
+      padding-left: 12px;
+      border-left: 3px solid #60a5fa;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      color: #34d399;
+      margin: 28px 0 10px;
+    }
+
+    p { margin-bottom: 12px; color: #cbd5e1; }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 1.05rem;
+      margin-bottom: 40px;
+    }
+
+    /* Cards */
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+
+    .card-blue  { border-color: #3b82f633; background: #1a2035; }
+    .card-green { border-color: #10b98133; background: #0f201a; }
+    .card-purple{ border-color: #8b5cf633; background: #1a1528; }
+    .card-orange{ border-color: #f5973333; background: #201a10; }
+    .card-red   { border-color: #f4373733; background: #201010; }
+
+    /* Code blocks */
+    pre {
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 18px;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin: 14px 0;
+      color: #e6edf3;
+    }
+
+    .token-blue   { color: #79c0ff; }
+    .token-green  { color: #56d364; }
+    .token-yellow { color: #e3b341; }
+    .token-purple { color: #bc8cff; }
+    .token-orange { color: #ffa657; }
+    .token-red    { color: #ff7b72; }
+    .token-gray   { color: #8b949e; }
+
+    /* Pipeline visuel */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 24px 0;
+      flex-wrap: wrap;
+    }
+
+    .pipe-box {
+      background: #1e2130;
+      border: 1px solid #3b82f6;
+      border-radius: 8px;
+      padding: 12px 18px;
+      text-align: center;
+      min-width: 120px;
+      font-size: 0.85rem;
+    }
+
+    .pipe-box .label { color: #94a3b8; font-size: 0.75rem; margin-bottom: 4px; }
+    .pipe-box .value { color: #60a5fa; font-weight: bold; }
+
+    .pipe-arrow {
+      color: #475569;
+      font-size: 1.5rem;
+      padding: 0 8px;
+    }
+
+    /* Matrice visuelle */
+    .matrix-container {
+      overflow-x: auto;
+      margin: 16px 0;
+    }
+
+    table.matrix {
+      border-collapse: collapse;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+    }
+
+    table.matrix th {
+      background: #1a2035;
+      color: #60a5fa;
+      padding: 6px 12px;
+      border: 1px solid #2d3148;
+      text-align: center;
+    }
+
+    table.matrix td {
+      padding: 5px 10px;
+      border: 1px solid #2d3148;
+      text-align: center;
+      color: #e2e8f0;
+    }
+
+    table.matrix tr.highlight td {
+      background: #1a3a2a;
+      color: #34d399;
+      font-weight: bold;
+    }
+
+    table.matrix td.row-label {
+      background: #1a2035;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      text-align: left;
+      padding-left: 12px;
+      white-space: nowrap;
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      margin: 2px;
+    }
+
+    .tag-blue   { background: #1d3461; color: #60a5fa; }
+    .tag-green  { background: #0f2d1f; color: #34d399; }
+    .tag-purple { background: #2d1a4a; color: #a78bfa; }
+    .tag-orange { background: #2d1f0a; color: #fbbf24; }
+
+    /* Alert boxes */
+    .alert {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.92rem;
+    }
+
+    .alert-important {
+      background: #1a1528;
+      border-left: 4px solid #a78bfa;
+      color: #c4b5fd;
+    }
+
+    .alert-warning {
+      background: #201a10;
+      border-left: 4px solid #fbbf24;
+      color: #fcd34d;
+    }
+
+    .alert-info {
+      background: #0f1e2d;
+      border-left: 4px solid #60a5fa;
+      color: #93c5fd;
+    }
+
+    /* Section numérotée */
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #a78bfa;
+      color: #0f1117;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .step-title {
+      font-size: 1.1rem;
+      color: #e2e8f0;
+      font-weight: bold;
+    }
+
+    /* Séparateur */
+    hr { border: none; border-top: 1px solid #2d3148; margin: 40px 0; }
+
+    /* Distinction importante */
+    .distinction {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    @media (max-width: 600px) {
+      .distinction { grid-template-columns: 1fr; }
+      .pipeline { flex-direction: column; }
+    }
+
+    .distinction-box {
+      background: #1e2130;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .distinction-box h4 { margin-bottom: 8px; font-size: 0.95rem; }
+
+    /* Highlight inline */
+    code {
+      background: #1e2130;
+      color: #f472b6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Architecture LLM</h1>
+  <p class="subtitle">Du texte brut aux paramètres — comprendre le processus complet d'entraînement</p>
+
+  <!-- ============================================================ -->
+  <h2>1. Les trois étapes fondamentales</h2>
+
+  <p>Une machine ne comprend que des nombres. Pour traiter du texte, on a donc besoin de deux transformations successives :</p>
+
+  <div class="pipeline">
+    <div class="pipe-box">
+      <div class="label">Texte brut</div>
+      <div class="value">"lentement"</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box" style="border-color: #f59e0b;">
+      <div class="label">Tokenisation</div>
+      <div class="value" style="color:#f59e0b;">ID = 8</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box" style="border-color: #34d399;">
+      <div class="label">Vectorisation</div>
+      <div class="value" style="color:#34d399;">[ -0.1, 0.3, ... ]</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-box" style="border-color: #a78bfa;">
+      <div class="label">Modèle</div>
+      <div class="value" style="color:#a78bfa;">Traitement</div>
+    </div>
+  </div>
+
+  <div class="alert alert-important">
+    <strong>Distinction fondamentale à ne jamais confondre :</strong><br><br>
+    <strong>Tokeniser</strong> = donner un ID à un token via le vocabulaire (dictionnaire texte → numéro). Fixe, ne change jamais.<br><br>
+    <strong>Vectoriser</strong> = transformer cet ID en vecteur via la matrice d'embedding. Ce vecteur évolue pendant l'entraînement et se stabilise à la fin.
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>2. Le vocabulaire et le tokenizer</h2>
+
+  <div class="distinction">
+    <div class="distinction-box card-blue">
+      <h4 style="color:#60a5fa;">Vocabulaire</h4>
+      <p>La <strong>liste</strong> de tous les tokens connus. Un simple tableau de correspondance <code>fragment → numéro</code>. Ne change jamais une fois établi.</p>
+    </div>
+    <div class="distinction-box card-purple">
+      <h4 style="color:#a78bfa;">Tokenizer</h4>
+      <p>L'<strong>outil/algorithme</strong> qui découpe le texte en utilisant ce vocabulaire. Le tokenizer <em>utilise</em> le vocabulaire pour faire son travail.</p>
+    </div>
+  </div>
+
+  <p>En pratique, le tokenizer et son vocabulaire sont distribués ensemble — le tokenizer a un nom, le vocabulaire est sa sous-partie technique. On ne les utilise jamais séparément.</p>
+
+  <h3>Concrètement en Python — deux dictionnaires</h3>
+
+  <pre><span class="token-gray"># Token → ID (pour encoder le texte entrant)</span>
+<span class="token-blue">token_to_id</span> = {
+    <span class="token-green">"animal"</span>: <span class="token-orange">0</span>,
+    <span class="token-green">"rapide"</span>: <span class="token-orange">1</span>,
+    <span class="token-green">"dort"</span>: <span class="token-orange">2</span>,
+    <span class="token-green">"mange"</span>: <span class="token-orange">3</span>,
+    <span class="token-green">"félin"</span>: <span class="token-orange">4</span>,
+    <span class="token-green">"chat"</span>: <span class="token-orange">5</span>,
+    <span class="token-green">"souris"</span>: <span class="token-orange">6</span>,
+    <span class="token-green">"chasse"</span>: <span class="token-orange">7</span>,
+    <span class="token-green">"lentement"</span>: <span class="token-orange">8</span>,
+    <span class="token-green">"nuit"</span>: <span class="token-orange">9</span>,
+    <span class="token-green">"petit"</span>: <span class="token-orange">10</span>,
+    <span class="token-green">"grand"</span>: <span class="token-orange">11</span>
+}  <span class="token-gray"># 12 mots au total</span>
+
+<span class="token-gray"># ID → Token (pour décoder la sortie du modèle)</span>
+<span class="token-blue">id_to_token</span> = {<span class="token-orange">v</span>: <span class="token-orange">k</span> <span class="token-purple">for</span> k, v <span class="token-purple">in</span> token_to_id.items()}</pre>
+
+  <div class="alert alert-info">
+    Pourquoi deux dictionnaires ? Un seul suffirait techniquement mais nécessiterait de parcourir toute la liste pour trouver l'inverse — très lent sur 50 000 tokens. Deux dictionnaires permettent une réponse instantanée dans les deux sens. C'est un compromis classique : un peu plus de mémoire pour beaucoup plus de vitesse.
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>3. Les structures de données — notre exemple</h2>
+
+  <p>On travaille avec des données bien séparées. Trois nombres distincts, aucun lien entre eux :</p>
+
+  <div class="card card-blue">
+    <pre><span class="token-blue">Vocabulaire</span>          : <span class="token-orange">12</span> mots  (IDs de 0 à 11)
+<span class="token-blue">Dimensions embedding</span> : <span class="token-orange">6</span>       (choix d'architecture — aurait pu être autre chose)
+<span class="token-blue">Matrice d'embedding</span>  : <span class="token-orange">12</span> lignes × <span class="token-orange">6</span> colonnes
+
+<span class="token-blue">Texte d'entraînement</span> : "petit chat chasse grand souris lentement nuit"
+<span class="token-blue">Tokens</span>               : [10, 5, 7, 11, 6, 8, 9]   ← <span class="token-orange">7</span> tokens
+
+<span class="token-blue">input_ids</span>   = [10,  5,  7, 11,  6,  8]   ← 6 paires
+<span class="token-blue">target_ids</span>  = [ 5,  7, 11,  6,  8,  9]   ← décalé d'un token</pre>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>4. La matrice d'embedding</h2>
+
+  <p>La matrice d'embedding fait <strong>12 lignes × 6 colonnes</strong>. Chaque ligne est un vecteur qui représente un token. Au départ, toutes les valeurs sont <strong>aléatoires</strong>. Elles seront apprises pendant l'entraînement.</p>
+
+  <div class="matrix-container">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>ID</th>
+          <th>dim 0</th>
+          <th>dim 1</th>
+          <th>dim 2</th>
+          <th>dim 3</th>
+          <th>dim 4</th>
+          <th>dim 5</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="row-label">animal</td><td>0</td><td>0.2</td><td>0.8</td><td>-0.1</td><td>0.5</td><td>0.3</td><td>-0.2</td></tr>
+        <tr><td class="row-label">rapide</td><td>1</td><td>0.9</td><td>-0.3</td><td>0.7</td><td>0.1</td><td>-0.4</td><td>0.6</td></tr>
+        <tr><td class="row-label">dort</td><td>2</td><td>-0.4</td><td>0.6</td><td>0.2</td><td>-0.8</td><td>0.1</td><td>0.3</td></tr>
+        <tr><td class="row-label">mange</td><td>3</td><td>0.1</td><td>0.4</td><td>-0.6</td><td>0.3</td><td>0.7</td><td>-0.1</td></tr>
+        <tr><td class="row-label">félin</td><td>4</td><td>0.3</td><td>0.7</td><td>-0.2</td><td>0.4</td><td>0.2</td><td>0.5</td></tr>
+        <tr><td class="row-label">chat</td><td>5</td><td>0.2</td><td>0.9</td><td>-0.1</td><td>0.4</td><td>0.3</td><td>0.4</td></tr>
+        <tr><td class="row-label">souris</td><td>6</td><td>-0.8</td><td>-0.2</td><td>0.5</td><td>0.6</td><td>-0.3</td><td>0.1</td></tr>
+        <tr><td class="row-label">chasse</td><td>7</td><td>0.7</td><td>-0.5</td><td>0.8</td><td>-0.3</td><td>0.6</td><td>-0.4</td></tr>
+        <tr class="highlight"><td class="row-label">lentement ← on prend celle-là</td><td>8</td><td>-0.1</td><td>0.3</td><td>0.4</td><td>-0.5</td><td>0.2</td><td>0.8</td></tr>
+        <tr><td class="row-label">nuit</td><td>9</td><td>-0.3</td><td>-0.6</td><td>0.1</td><td>0.7</td><td>-0.5</td><td>0.2</td></tr>
+        <tr><td class="row-label">petit</td><td>10</td><td>0.5</td><td>0.2</td><td>-0.3</td><td>0.1</td><td>0.8</td><td>-0.6</td></tr>
+        <tr><td class="row-label">grand</td><td>11</td><td>0.4</td><td>-0.1</td><td>0.6</td><td>-0.2</td><td>0.5</td><td>0.3</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="alert alert-info">
+    La hauteur de la matrice d'embedding (12 lignes) et la taille du vocabulaire (12 mots) sont <strong>forcément identiques</strong>. Chaque token doit avoir exactement une ligne — ni plus, ni moins. Le nombre de colonnes (6) est lui un choix libre d'architecture.
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>5. Le forward pass — tour complet</h2>
+
+  <p>On prend le tour : <code>input = "lentement" (ID 8)</code> → <code>target = "nuit" (ID 9)</code></p>
+
+  <!-- Étape 1 -->
+  <div class="card card-green" style="margin-top:24px;">
+    <div class="step-header">
+      <div class="step-number">1</div>
+      <div class="step-title">Tokenisation + Vectorisation</div>
+    </div>
+    <pre><span class="token-green">"lentement"</span>
+    ↓  tokenisation (vocabulaire)
+<span class="token-orange">ID = 8</span>
+    ↓  vectorisation (on prend la ligne 8 de la matrice d'embedding)
+<span class="token-blue">vecteur_entree</span> = [ <span class="token-orange">-0.1,  0.3,  0.4, -0.5,  0.2,  0.8</span> ]
+                   <span class="token-gray">dim0  dim1  dim2  dim3  dim4  dim5</span></pre>
+    <p style="color:#86efac;">Ce vecteur de 6 nombres représente l'état du token "lentement" à l'instant T — c'est-à-dire tout ce que le modèle sait sur "lentement" jusqu'à ce moment de l'entraînement.</p>
+  </div>
+
+  <!-- Étape 2 -->
+  <div class="card card-blue" style="margin-top:16px;">
+    <div class="step-header">
+      <div class="step-number">2</div>
+      <div class="step-title">Couche cachée — Matrice de poids W [6 × 6]</div>
+    </div>
+    <p>Le vecteur d'entrée est multiplié par la matrice de poids W. Les 6 lignes sont contraintes par la taille du vecteur d'entrée. Les 6 colonnes sont un choix libre — auraient pu être 16, 32, autre chose.</p>
+    <pre><span class="token-blue">vecteur_entree [6]</span>  ×  <span class="token-purple">Matrice W [6 × 6]</span>  =  <span class="token-yellow">vecteur_cache [6]</span>
+
+<span class="token-purple">Matrice W</span> (initialisée aléatoirement) :
+[  0.1,  0.4, -0.2,  0.3,  0.5, -0.1 ]
+[ -0.3,  0.2,  0.6, -0.4,  0.1,  0.3 ]
+[  0.5, -0.1,  0.3,  0.2, -0.6,  0.4 ]
+[ -0.2,  0.3, -0.5,  0.1,  0.4, -0.3 ]
+[  0.4, -0.6,  0.1, -0.3,  0.2,  0.5 ]
+[ -0.1,  0.2,  0.4, -0.5,  0.3, -0.2 ]
+
+<span class="token-yellow">vecteur_cache</span> = [ 0.21, -0.14,  0.33, -0.18,  0.42,  0.11 ]</pre>
+    <div class="alert alert-important" style="margin-top:12px;">
+      La matrice W c'est la <strong>matrice de poids</strong> — le cœur du réseau de neurones. C'est là que la connaissance est stockée. Elle est initialisée aléatoirement et apprise pendant l'entraînement. C'est le "secret industriel" des grandes entreprises d'IA.
+    </div>
+  </div>
+
+  <!-- Étape 3 -->
+  <div class="card card-purple" style="margin-top:16px;">
+    <div class="step-header">
+      <div class="step-number">3</div>
+      <div class="step-title">Matrice de sortie S [6 × 12]</div>
+    </div>
+    <p>Le vecteur caché passe par la matrice de sortie. Les 12 colonnes sont contraintes par le vocabulaire — on a besoin d'un score pour chaque mot possible.</p>
+    <pre><span class="token-yellow">vecteur_cache [6]</span>  ×  <span class="token-red">Matrice S [6 × 12]</span>  =  <span class="token-green">scores [12]</span>
+
+<span class="token-gray">Les 12 colonnes de S correspondent aux 12 mots du vocabulaire :</span>
+<span class="token-gray">col0=animal  col1=rapide  col2=dort  col3=mange  col4=félin  col5=chat
+col6=souris  col7=chasse  col8=lentement  col9=nuit  col10=petit  col11=grand</span>
+
+<span class="token-green">scores</span> = [ 0.18, -0.09,  0.21,  0.14, -0.11,  0.08,  0.19, -0.03,  0.12, <span class="token-yellow"> 0.07</span>,  0.15,  0.11 ]
+          <span class="token-gray"> ani    rap    dor    man    fél    cha    sou    cha    len   <span class="token-yellow">nui</span>    pet    gra</span>
+          <span class="token-gray">  0      1      2      3      4      5      6      7      8     <span class="token-yellow"> 9</span>     10     11</span></pre>
+    <p>La position 9 correspond toujours à "nuit" — <strong>garanti par la structure de la matrice</strong>, pas par le modèle. Les colonnes sont câblées avant l'entraînement.</p>
+  </div>
+
+  <!-- Étape 4 -->
+  <div class="card card-orange" style="margin-top:16px;">
+    <div class="step-header">
+      <div class="step-number">4</div>
+      <div class="step-title">Softmax → Probabilités</div>
+    </div>
+    <p>On convertit les 12 scores en probabilités via le softmax. Toutes les valeurs se retrouvent entre 0 et 1, et leur somme vaut 1.</p>
+    <pre><span class="token-green">scores</span>  = [ 0.18, -0.09,  0.21,  0.14, -0.11,  0.08,  0.19, -0.03,  0.12,  <span class="token-yellow">0.07</span>,  0.15,  0.11 ]
+                                                                                <span class="token-yellow">↑ nuit</span>
+    ↓  softmax
+
+<span class="token-orange">probas</span>  = [ 0.09,  0.07,  0.09,  0.08,  0.06,  0.08,  0.09,  0.07,  0.08,  <span class="token-yellow">0.07</span>,  0.08,  0.08 ]
+                                                                                <span class="token-yellow">↑ nuit = 7%</span>
+
+<span class="token-gray">Somme des probabilités = 1.0 ✓</span></pre>
+    <p>"nuit" n'a que 7% de probabilité — c'est normal au premier tour, les matrices sont encore aléatoires.</p>
+  </div>
+
+  <!-- Étape 5 -->
+  <div class="card card-red" style="margin-top:16px;">
+    <div class="step-header">
+      <div class="step-number">5</div>
+      <div class="step-title">Loss — mesurer l'erreur</div>
+    </div>
+    <p>On regarde uniquement la probabilité donnée à la <strong>bonne réponse</strong> ("nuit" = position 9) et on calcule la loss via la cross-entropy :</p>
+    <pre><span class="token-gray">Bonne réponse = "nuit" = index 9 = probabilité 0.07</span>
+
+<span class="token-red">loss</span> = -log(0.07) = <span class="token-red">2.65</span>   ← grosse erreur
+
+<span class="token-gray">Si le modèle avait donné 90% à "nuit" :</span>
+<span class="token-green">loss</span> = -log(0.90) = <span class="token-green">0.10</span>   ← petite erreur</pre>
+    <div class="alert alert-warning">
+      Plus la probabilité donnée à la bonne réponse est petite → plus la loss est grande. On veut minimiser la loss. Un seul nombre pour mesurer toute l'erreur du tour.
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>6. La rétropropagation</h2>
+
+  <p>On sait de combien on s'est trompé (loss = 2.65). Maintenant on remonte en arrière pour ajuster les matrices.</p>
+
+  <h3>La chain rule — un seul calcul, plusieurs gradients</h3>
+
+  <p>La <strong>chain rule</strong> (règle de la chaîne) permet de calculer le gradient de chaque matrice en remontant la chaîne de calcul :</p>
+
+  <pre><span class="token-gray">FORWARD (aller) :</span>
+embedding → W → S → scores → softmax → loss
+
+<span class="token-gray">BACKWARD (retour) :</span>
+loss → <span class="token-red">dL/dS</span> → <span class="token-orange">dL/dW</span> → <span class="token-yellow">dL/dE</span>
+
+<span class="token-gray">Chaque gradient est calculé à partir du précédent :</span>
+dL/dS = dérivée de la loss par rapport à S
+dL/dW = dL/dS  ×  dS/dW
+dL/dE = dL/dW  ×  dW/dE</pre>
+
+  <p>Un seul point de départ (la loss) génère un gradient différent pour chaque matrice.</p>
+
+  <h3>La mise à jour des paramètres</h3>
+
+  <pre><span class="token-gray">learning_rate = 0.01</span>
+
+<span class="token-gray">Pour chaque paramètre de chaque matrice :</span>
+parametre_nouveau = parametre_ancien - learning_rate × gradient
+
+<span class="token-gray">Exemple sur la matrice S :</span>
+gradient_S = 0.08
+<span class="token-orange">0.3</span>  →  0.3  - (0.01 × 0.08) = <span class="token-green">0.2992</span>
+<span class="token-orange">-0.1</span> →  -0.1 - (0.01 × 0.08) = <span class="token-green">-0.1008</span>
+
+<span class="token-gray">Exemple sur la ligne 8 de l'embedding ("lentement") :</span>
+gradient_E = 0.01
+<span class="token-orange">-0.1</span> →  -0.1 - (0.01 × 0.01) = <span class="token-green">-0.1001</span>
+<span class="token-orange">0.3</span>  →   0.3 - (0.01 × 0.01) = <span class="token-green">0.2999</span></pre>
+
+  <div class="alert alert-info">
+    <strong>Ce qui est mis à jour à chaque tour :</strong><br>
+    1. La ligne du token en <strong>entrée</strong> dans la matrice d'embedding<br>
+    2. La matrice de poids W<br>
+    3. La matrice de sortie S<br><br>
+    La ligne du token <strong>cible</strong> dans l'embedding n'est PAS mise à jour — elle n'a pas participé au calcul du forward pass.
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>7. La boucle complète d'entraînement</h2>
+
+  <pre><span class="token-blue">for</span> epoch <span class="token-blue">in</span> range(nb_epochs):
+    <span class="token-blue">for</span> i <span class="token-blue">in</span> range(len(input_ids)):
+
+        <span class="token-gray"># 1. Récupérer le vecteur du token en entrée</span>
+        vecteur_entree = embedding[input_ids[i]]          <span class="token-gray"># ligne i de l'embedding</span>
+
+        <span class="token-gray"># 2. Passer par la couche cachée</span>
+        vecteur_cache = vecteur_entree @ W                <span class="token-gray"># produit matriciel</span>
+
+        <span class="token-gray"># 3. Produire les scores</span>
+        scores = vecteur_cache @ S                        <span class="token-gray"># 12 scores</span>
+
+        <span class="token-gray"># 4. Softmax → probabilités</span>
+        probas = softmax(scores)
+
+        <span class="token-gray"># 5. Calculer la loss</span>
+        loss = -log(probas[target_ids[i]])                <span class="token-gray"># proba de la bonne réponse</span>
+
+        <span class="token-gray"># 6. Rétropropagation → gradients via chain rule</span>
+        gradients = backprop(loss)
+
+        <span class="token-gray"># 7. Mise à jour des matrices</span>
+        S -= learning_rate * gradients.S
+        W -= learning_rate * gradients.W
+        embedding[input_ids[i]] -= learning_rate * gradients.E</pre>
+
+  <p>Les 6 tours de notre texte d'entraînement :</p>
+
+  <div class="matrix-container">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Tour</th>
+          <th>Input</th>
+          <th>ID</th>
+          <th>Target</th>
+          <th>ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>petit</td><td>10</td><td>chat</td><td>5</td></tr>
+        <tr><td>2</td><td>chat</td><td>5</td><td>chasse</td><td>7</td></tr>
+        <tr><td>3</td><td>chasse</td><td>7</td><td>grand</td><td>11</td></tr>
+        <tr><td>4</td><td>grand</td><td>11</td><td>souris</td><td>6</td></tr>
+        <tr><td>5</td><td>souris</td><td>6</td><td>lentement</td><td>8</td></tr>
+        <tr class="highlight"><td>6</td><td>lentement</td><td>8</td><td>nuit</td><td>9</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>8. Ce qui fait vraiment la puissance d'un LLM</h2>
+
+  <p>Le tokenizer et le vocabulaire sont nécessaires mais pas ce qui rend un LLM puissant. Par ordre d'importance :</p>
+
+  <div class="card card-purple">
+    <pre><span class="token-orange">1. Architecture Transformer</span>  ← mécanisme d'attention, game changer
+<span class="token-blue">2. Quantité de données</span>       ← centaines de milliards de tokens
+<span class="token-green">3. Nombre de paramètres</span>      ← GPT-4 ≈ 1000 milliards
+<span class="token-yellow">4. Puissance de calcul</span>       ← GPU/TPU massifs
+<span class="token-purple">5. Fine-tuning / RLHF</span>        ← pour suivre des instructions</pre>
+  </div>
+
+  <h3>Simple réseau vs Transformer</h3>
+
+  <pre><span class="token-gray">Simple réseau :</span>
+token → embedding → W → S → scores
+<span class="token-gray">Chaque token traité indépendamment — pas de contexte</span>
+
+<span class="token-gray">Transformer :</span>
+token → embedding → <span class="token-orange">attention</span> → W → <span class="token-orange">attention</span> → W → S → scores
+<span class="token-gray">Chaque token regarde tous les autres — comprend le contexte</span>
+
+<span class="token-gray">Exemple :</span>
+"Le <span class="token-blue">chat</span> que j'ai vu hier dans le jardin <span class="token-yellow">dort</span>"
+<span class="token-gray">→ L'attention connecte "dort" à "chat" malgré la distance</span></pre>
+
+  <!-- ============================================================ -->
+  <h2>9. Architecture interne complète</h2>
+
+  <pre><span class="token-gray">Paramètres totaux d'un LLM :</span>
+├── <span class="token-green">Matrice d'embedding</span>          [vocab_size × embed_dim]
+├── <span class="token-blue">Couches Transformer</span> (× N)
+│   ├── <span class="token-orange">Matrices d'attention</span> (Q, K, V)
+│   ├── <span class="token-orange">Matrices de projection</span>
+│   └── <span class="token-orange">Réseaux feed-forward</span>
+└── <span class="token-purple">Matrice de sortie</span>             [embed_dim × vocab_size]
+
+<span class="token-gray">Proportions sur GPT-2 (117M params) :</span>
+  Matrice d'embedding  ≈ 40M paramètres
+  Couches Transformer  ≈ 77M paramètres</pre>
+
+  <div class="alert alert-important">
+    <strong>Contraintes dures :</strong><br>
+    ENTRÉE → déterminée par le vocabulaire (hauteur de l'embedding = taille vocab)<br>
+    SORTIE → déterminée par le vocabulaire (colonnes de la matrice de sortie = taille vocab)<br>
+    MILIEU → totalement libre (nombre de couches, dimensions cachées, etc.)
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>10. Les poids — le secret industriel</h2>
+
+  <p>L'architecture (comment les matrices sont organisées) est souvent publique. Ce qui n'est pas public :</p>
+
+  <div class="distinction">
+    <div class="distinction-box card-red">
+      <h4 style="color:#f87171;">Les poids</h4>
+      <p>Les milliards de nombres dans toutes les matrices. Résultat de mois d'entraînement sur des milliers de GPU. Quelqu'un qui a les poids a le modèle.</p>
+    </div>
+    <div class="distinction-box card-orange">
+      <h4 style="color:#fbbf24;">Les données d'entraînement</h4>
+      <p>Sur quels textes exactement, dans quelles proportions, avec quel nettoyage.</p>
+    </div>
+  </div>
+
+  <p>Quand Meta a sorti Llama avec les poids en open source, c'était un événement majeur — ils ont donné les poids, pas juste l'architecture. OpenAI, Anthropic, Google gardent leurs poids secrets. C'est littéralement leur actif principal.</p>
+
+  <!-- ============================================================ -->
+  <h2>11. La boîte noire des dimensions</h2>
+
+  <p>Les 6 dimensions (ou 768 pour BERT) dans chaque vecteur d'embedding — que représentent-elles ?</p>
+
+  <div class="card card-purple">
+    <p><strong>Personne ne l'a décidé.</strong> Ces nombres émergent de l'entraînement automatiquement. Le modèle trouve ses propres représentations, optimisées pour prédire des tokens.</p>
+    <p style="margin-top:12px;">Des chercheurs ont trouvé des dimensions qui semblent correspondre à des concepts (noms propres, verbes d'action...) mais c'est rarement propre. Un concept est souvent réparti sur plusieurs dimensions, et une dimension participe à plusieurs concepts simultanément.</p>
+    <p style="margin-top:12px;">C'est le domaine de l'<strong>interpretability</strong> (mechanistic interpretability) — un domaine de recherche très actif, notamment chez Anthropic.</p>
+  </div>
+
+  <hr>
+
+  <p style="color:#475569; text-align:center; font-size:0.85rem; margin-top:32px;">
+    Notes de conversation — Architecture LLM — generé à partir de nos échanges
+  </p>
+
+</div>
+</body>
+</html>
