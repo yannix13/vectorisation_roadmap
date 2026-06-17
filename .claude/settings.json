@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/staaliyannis/Documents/vectorisation/trigonometrie && echo ok)",
+      "Edit(~/.claude/skills/export-session/**)",
+      "Bash(python3 ~/.claude/skills/export-session/export_session.py 6afef0c8-dffc-4e06-acdc-293797cdc24e.jsonl /tmp/test_export2.md)",
+      "Read(//tmp/**)",
+      "Bash(rm -f /tmp/test_export.md /tmp/test_export2.md)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(gh api *)",
+      "Bash(python3 ~/.claude/skills/export-session/export_session.py 1c8db3d9-1654-4f5a-818b-7e9dd5478656.jsonl /Users/staaliyannis/Documents/vectorisation/conversation_logarithmes.md)",
+      "Bash(npx -y lavish-axi poll /Users/staaliyannis/Documents/vectorisation/tdif/naive_bayes/naive_bayes_explained.html --agent-reply \"Titre/sous-titre différenciés : le titre est maintenant plus gros \\(2.7rem\\) et plus gras \\(800\\), le sous-titre reste léger et secondaire, et la ligne de séparation passe sous tout le bloc d'en-tête au lieu de coller sous le titre. Dis-moi si tu veux pousser plus loin \\(couleur, taille, espacement\\).\")",
+      "Bash(npx -y lavish-axi poll /Users/staaliyannis/Documents/vectorisation/tdif/naive_bayes/naive_bayes_explained.html --agent-reply \"Séparation accentuée : titre en MAJUSCULES + gros espace dessous, sous-titre en italique plus petit/discret avec une barre verticale violette à gauche \\(style accroche décalée\\). Au passage : le rectangle orange que tu voyais autour du titre, c'était le surlignage d'annotation de Lavish, pas mon CSS. Ça te va ou je pousse encore ?\")"
+    ],
+    "additionalDirectories": [
+      "/Users/staaliyannis/Documents/vectorisation"
+    ]
+  }
+}

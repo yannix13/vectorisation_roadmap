@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Naïve Bayes — Comprendre le détecteur de spam, étape par étape</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    h1 {
+      font-size: 2.7rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #a78bfa;
+      margin-bottom: 22px;
+      line-height: 1.15;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      color: #60a5fa;
+      margin: 48px 0 16px;
+      padding-left: 12px;
+      border-left: 3px solid #60a5fa;
+    }
+
+    h3 { font-size: 1.1rem; color: #34d399; margin: 28px 0 10px; }
+
+    p { margin-bottom: 12px; color: #cbd5e1; }
+
+    .subtitle {
+      color: #8794a8;
+      font-size: 0.98rem;
+      font-weight: 400;
+      font-style: italic;
+      line-height: 1.7;
+      max-width: 760px;
+      margin-bottom: 40px;
+      padding-left: 16px;
+      padding-bottom: 28px;
+      border-left: 3px solid #a78bfa55;
+      border-bottom: 2px solid #a78bfa33;
+    }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+
+    .card-blue  { border-color: #3b82f633; background: #1a2035; }
+    .card-green { border-color: #10b98133; background: #0f201a; }
+    .card-purple{ border-color: #8b5cf633; background: #1a1528; }
+    .card-orange{ border-color: #f5973333; background: #201a10; }
+    .card-red   { border-color: #f4373733; background: #201010; }
+
+    pre {
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 18px;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin: 14px 0;
+      color: #e6edf3;
+    }
+
+    .token-blue   { color: #79c0ff; }
+    .token-green  { color: #56d364; }
+    .token-yellow { color: #e3b341; }
+    .token-purple { color: #bc8cff; }
+    .token-orange { color: #ffa657; }
+    .token-red    { color: #ff7b72; }
+    .token-gray   { color: #8b949e; }
+    .token-pink   { color: #f472b6; }
+
+    table.matrix {
+      border-collapse: collapse;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.82rem;
+      margin: 16px 0;
+      width: 100%;
+    }
+    table.matrix th {
+      background: #1a2035;
+      color: #60a5fa;
+      padding: 8px 12px;
+      border: 1px solid #2d3148;
+      text-align: center;
+    }
+    table.matrix td {
+      padding: 7px 10px;
+      border: 1px solid #2d3148;
+      text-align: center;
+      color: #e2e8f0;
+    }
+    table.matrix tr.highlight td { background: #1a3a2a; color: #34d399; font-weight: bold; }
+    table.matrix td.row-label {
+      background: #1a2035; color: #94a3b8; font-size: 0.78rem;
+      text-align: left; padding-left: 12px; white-space: nowrap;
+    }
+
+    .tag {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: bold; margin: 2px;
+    }
+    .tag-blue   { background: #1d3461; color: #60a5fa; }
+    .tag-green  { background: #0f2d1f; color: #34d399; }
+    .tag-purple { background: #2d1a4a; color: #a78bfa; }
+    .tag-orange { background: #2d1f0a; color: #fbbf24; }
+    .tag-pink   { background: #3a1228; color: #f472b6; }
+    .tag-red    { background: #3a1212; color: #f87171; }
+
+    .alert { border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 0.92rem; }
+    .alert-important { background: #1a1528; border-left: 4px solid #a78bfa; color: #c4b5fd; }
+    .alert-warning   { background: #201a10; border-left: 4px solid #fbbf24; color: #fcd34d; }
+    .alert-info      { background: #0f1e2d; border-left: 4px solid #60a5fa; color: #93c5fd; }
+    .alert-success   { background: #0f201a; border-left: 4px solid #34d399; color: #6ee7b7; }
+    .alert-danger    { background: #201010; border-left: 4px solid #f87171; color: #fca5a5; }
+
+    .step-number {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #a78bfa; color: #0f1117; font-weight: bold; font-size: 0.9rem;
+      margin-right: 10px; flex-shrink: 0;
+    }
+    .step-header { display: flex; align-items: center; margin-bottom: 14px; }
+    .step-title { font-size: 1.15rem; color: #e2e8f0; font-weight: bold; }
+
+    hr { border: none; border-top: 1px solid #2d3148; margin: 40px 0; }
+
+    .distinction { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    @media (max-width: 600px) { .distinction { grid-template-columns: 1fr; } }
+    .distinction-box { background: #1e2130; border-radius: 8px; padding: 16px; border: 1px solid #2d3148; }
+    .distinction-box h4 { margin-bottom: 8px; font-size: 0.95rem; }
+
+    code {
+      background: #1e2130; color: #f472b6; padding: 2px 6px; border-radius: 4px;
+      font-family: 'Fira Code', monospace; font-size: 0.85em;
+    }
+
+    .formula {
+      background: #0d1117; border: 1px solid #2d3148; border-radius: 10px;
+      padding: 22px; margin: 20px 0; text-align: center;
+      font-family: 'Fira Code', monospace; font-size: 1.05rem; color: #e6edf3;
+    }
+    .formula .hi { color: #34d399; font-weight: bold; }
+    .formula .op { color: #f472b6; font-weight: bold; }
+    .formula .mut{ color: #fbbf24; font-weight: bold; }
+    .formula small { display:block; color:#8b949e; font-size:0.78rem; margin-top:10px; }
+
+    .lead {
+      color: #c4b5fd; font-size: 1.05rem; font-style: italic;
+      border-left: 3px solid #a78bfa; padding-left: 14px; margin: 18px 0;
+    }
+
+    /* Ingredient grid */
+    .ingredients { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+    @media (max-width: 600px) { .ingredients { grid-template-columns: 1fr; } }
+    .ingredient {
+      background: #161a27; border: 1px solid #2d3148; border-radius: 10px; padding: 16px;
+      position: relative;
+    }
+    .ingredient .num {
+      position:absolute; top:-10px; left:-10px; width:26px; height:26px; border-radius:50%;
+      background:#34d399; color:#0f1117; font-weight:bold; font-size:0.8rem;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .ingredient h4 { color:#34d399; font-size:0.95rem; margin-bottom:6px; }
+    .ingredient .meta { color:#8b949e; font-size:0.78rem; }
+
+    /* Probability tree */
+    .tree { font-family:'Fira Code', monospace; font-size:0.8rem; line-height:1.5; color:#e6edf3; }
+
+    /* Flow diagram */
+    .flow {
+      display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:18px 0;
+    }
+    .flow-box {
+      flex:1; min-width:150px; background:#161a27; border:1px solid #2d3148;
+      border-radius:10px; padding:14px; text-align:center;
+    }
+    .flow-box .ttl { font-weight:bold; margin-bottom:6px; }
+    .flow-arrow { align-self:center; color:#a78bfa; font-size:1.4rem; font-weight:bold; }
+
+    .pill { display:inline-block; padding:1px 8px; border-radius:6px; font-family:'Fira Code',monospace; font-size:0.8rem; }
+    .pill-spam { background:#3a1212; color:#f87171; }
+    .pill-ham  { background:#0f2d1f; color:#34d399; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Naïve Bayes — le détecteur de spam, démonté pièce par pièce</h1>
+  <p class="subtitle">
+    Comment une machine décide si un email est <span class="pill pill-spam">spam</span>
+    ou <span class="pill pill-ham">ham</span> (normal) — sans aucune magie, juste en comptant des mots.
+    Tous les chiffres viennent du corpus de <code>naive_bayes_spam.ipynb</code> :
+    <strong>5 spams, 5 hams</strong>.
+  </p>
+
+  <div class="alert alert-important">
+    <strong>L'idée en une phrase.</strong> On ne sait pas mesurer « la proba que ce texte soit un spam ».
+    Mais on sait compter « à quel point ces mots ressemblent à du spam ». Naïve Bayes
+    <em>retourne</em> la question grâce au théorème de Bayes, puis <em>compare</em> deux mondes
+    (spam vs ham) et garde le plus probable.
+  </div>
+
+  <!-- ============================================================ -->
+  <h2>Vue d'ensemble : deux phases</h2>
+
+  <div class="flow">
+    <div class="flow-box card-blue">
+      <div class="ttl" style="color:#60a5fa;">PHASE 1 — Entraînement</div>
+      <div style="font-size:0.82rem; color:#cbd5e1;">On <strong>compte les mots</strong> d'un corpus déjà étiqueté.</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box card-green">
+      <div class="ttl" style="color:#34d399;">LE MODÈLE</div>
+      <div style="font-size:0.82rem; color:#cbd5e1;">4 tableaux de chiffres : <code>compteur</code>, <code>total_mots</code>, <code>V</code>, <code>prior</code>.</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box card-purple">
+      <div class="ttl" style="color:#a78bfa;">PHASE 2 — Prédiction</div>
+      <div style="font-size:0.82rem; color:#cbd5e1;">Pour un nouvel email : un <strong>score</strong> par classe → le plus grand gagne.</div>
+    </div>
+  </div>
+
+  <p class="lead">À retenir avant tout : « le modèle », ce n'est qu'un paquet de comptages. Aucun réseau de neurones, aucune intelligence cachée — que des additions de mots.</p>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <h2>PHASE 1 — L'entraînement = compter</h2>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="step-header"><span class="step-number">1</span><span class="step-title">Le corpus, découpé en classes</span></div>
+    <p>La matière première : des emails dont on connaît <strong>déjà</strong> la classe (apprentissage <em>supervisé</em>). On les range en deux paquets.</p>
+    <pre><span class="token-gray"># corpus = liste de (texte, label)</span>
+<span class="token-red">[spam]</span> "Gagnez de l'argent facile, cliquez ici"
+<span class="token-red">[spam]</span> "Argent gratuit, offre exclusive, cliquez maintenant"
+<span class="token-red">[spam]</span> ...                                  <span class="token-gray">(5 spams)</span>
+<span class="token-green">[ham ]</span> "Salut, on se voit demain pour le dejeuner"
+<span class="token-green">[ham ]</span> "Peux-tu m'envoyer le rapport du projet"
+<span class="token-green">[ham ]</span> ...                                  <span class="token-gray">(5 hams)</span></pre>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="step-header"><span class="step-number">2</span><span class="step-title">Tokeniser : découper en mots</span></div>
+    <p>Minuscules, on remplace apostrophe et ponctuation par des espaces, puis on coupe sur les espaces.</p>
+    <pre><span class="token-purple">tokeniser</span>(<span class="token-yellow">"Gagnez de l'argent gratuit, maintenant !"</span>)
+<span class="token-gray">→</span> [<span class="token-yellow">'gagnez'</span>, <span class="token-yellow">'de'</span>, <span class="token-yellow">'l'</span>, <span class="token-yellow">'argent'</span>, <span class="token-yellow">'gratuit'</span>, <span class="token-yellow">'maintenant'</span>]</pre>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="step-header"><span class="step-number">3</span><span class="step-title">Compter chaque mot, séparément par classe</span></div>
+    <p>Pour chaque classe, un <strong>sac de mots</strong> (<code>Counter</code>) qui associe <code>mot → nombre d'occurrences</code>.</p>
+    <pre><span class="token-blue">compteur</span> = {
+  <span class="token-red">'spam'</span>: Counter({<span class="token-yellow">'argent'</span>: 5, <span class="token-yellow">'cliquez'</span>: 3, <span class="token-yellow">'gratuit'</span>: 2, <span class="token-yellow">'offre'</span>: 2, ...}),
+  <span class="token-green">'ham'</span> : Counter({<span class="token-yellow">'demain'</span>: 3, <span class="token-yellow">'le'</span>: 3, <span class="token-yellow">'pour'</span>: 2, ...}),
+}</pre>
+    <p style="margin-top:10px;">Accès direct : <code>compteur['spam']['argent']</code> → <strong>5</strong>. Et la propriété magique du <code>Counter</code> : un mot absent renvoie <strong>0</strong> au lieu de planter.</p>
+
+    <table class="matrix">
+      <tr><th>mot</th><th>dans spam</th><th>dans ham</th></tr>
+      <tr class="highlight"><td class="row-label">argent</td><td>5</td><td>0</td></tr>
+      <tr><td class="row-label">cliquez</td><td>3</td><td>0</td></tr>
+      <tr><td class="row-label">gratuit</td><td>2</td><td>0</td></tr>
+      <tr><td class="row-label">demain</td><td>0</td><td>3</td></tr>
+      <tr><td class="row-label">le</td><td>0</td><td>3</td></tr>
+      <tr><td class="row-label">rapport</td><td>0</td><td>1</td></tr>
+    </table>
+    <div class="alert alert-info">« argent », « cliquez », « gratuit » <strong>vivent côté spam</strong> ; « demain », « le », « rapport » <strong>vivent côté ham</strong>. C'est exactement ce signal que le modèle exploite.</div>
+  </div>
+
+  <!-- Step 4: the 4 ingredients -->
+  <div class="card card-green">
+    <div class="step-header"><span class="step-number">4</span><span class="step-title">La sortie de l'entraînement = LE MODÈLE = 4 ingrédients</span></div>
+    <p>Tout l'entraînement se résume à ces quatre tableaux de chiffres. La prédiction ne fera que <strong>piocher dedans</strong>.</p>
+
+    <div class="ingredients">
+      <div class="ingredient">
+        <span class="num">1</span>
+        <h4>compteur</h4>
+        <div class="meta">{classe : {mot : nb}}</div>
+        <p style="font-size:0.85rem; margin-top:6px;">Le cœur. Combien de fois chaque mot apparaît dans chaque classe.</p>
+      </div>
+      <div class="ingredient">
+        <span class="num">2</span>
+        <h4>total_mots</h4>
+        <div class="meta">{spam: 36, ham: 38}</div>
+        <p style="font-size:0.85rem; margin-top:6px;">Nb total de mots <em>par classe</em> (doublons compris). C'est le <strong>dénominateur</strong> de P(mot|classe).</p>
+      </div>
+      <div class="ingredient">
+        <span class="num">3</span>
+        <h4>V</h4>
+        <div class="meta">= 54</div>
+        <p style="font-size:0.85rem; margin-top:6px;">Taille du vocabulaire = nb de mots <strong>uniques</strong>, spam + ham confondus. Sert au lissage.</p>
+      </div>
+      <div class="ingredient">
+        <span class="num">4</span>
+        <h4>prior</h4>
+        <div class="meta">{spam: 0.5, ham: 0.5}</div>
+        <p style="font-size:0.85rem; margin-top:6px;">Proportion de docs de chaque classe = <code>5/10</code>. Proba qu'un email <em>au hasard</em> soit de cette classe, <strong>avant lecture</strong>.</p>
+      </div>
+    </div>
+
+    <div class="alert alert-warning">
+      <strong>Piège à ne pas confondre</strong> — <code>total_mots</code> (36, 38) et <code>V</code> (54) sont
+      <strong>deux compteurs différents</strong>. L'un = papiers dans le bocal d'<em>une</em> classe (avec doublons) ;
+      l'autre = nombre de mots <em>distincts</em> du vocabulaire (commun aux deux classes). C'est normal qu'ils diffèrent.
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <h2>Des comptages aux probabilités</h2>
+
+  <div class="card">
+    <h3>La brique de base : P(mot | classe)</h3>
+    <p>C'est une <strong>proportion</strong> : quelle part ce mot occupe dans le bocal de la classe.</p>
+    <div class="formula">
+      P(mot <span class="op">|</span> classe) =
+      <span class="hi">occurrences du mot dans la classe</span> <span class="op">/</span> <span class="mut">total de mots de la classe</span>
+      <small>« proportion » et « probabilité » sont ici la même chose : la chance de tirer ce mot au hasard dans le bocal.</small>
+    </div>
+    <div class="alert alert-info">
+      La barre <code>|</code> = « <strong>sachant qu'on est déjà dans ce monde</strong> ». Le <code>| spam</code> restreint
+      l'univers aux spams → le dénominateur est le total des mots <strong>spam seulement</strong> (36), pas spam+ham.
+      <strong>Un bocal = un monde = une classe.</strong>
+    </div>
+  </div>
+
+  <!-- Laplace -->
+  <div class="card card-orange">
+    <h3>⚠️ Le problème du zéro, et le lissage de Laplace</h3>
+    <p>Un mot jamais vu dans une classe donnerait <code>P = 0</code>. Et plus tard on prend le <code>log</code> → <code>log(0) = -∞</code> → tout le score explose.</p>
+
+    <div class="formula">
+      P(mot <span class="op">|</span> classe) =
+      ( <span class="hi">occurrences</span> <span class="op">+ 1</span> ) <span class="op">/</span> ( <span class="mut">total_mots</span> <span class="op">+ V</span> )
+      <small>lissage de Laplace</small>
+    </div>
+
+    <h3 style="color:#fbbf24;">Pourquoi « +1 » en haut ?</h3>
+    <p>On fait comme si on avait vu <strong>chaque mot du vocabulaire une fois de plus</strong>. Même un mot absent reçoit alors une mini-proba non nulle, jamais zéro.</p>
+
+    <h3 style="color:#fbbf24;">Pourquoi « +V » en bas (et pas +1, ni +autre chose) ?</h3>
+    <p>On a ajouté <code>+1</code> au numérateur de <strong>chacun des V mots</strong> du vocabulaire → on a ajouté <code>+1</code>, <strong>V fois au total</strong>. Pour que les probas restent cohérentes (qu'elles somment toujours à 1), le dénominateur doit grossir d'autant : <code>+V</code>.</p>
+    <pre>Σ P(mot|spam)  =  Σ (occurrences + 1)      (total_mots) + (V × 1)
+   tous mots       ────────────────────  =  ─────────────────────  = <span class="token-green">1</span> ✅
+                      total_mots + V            total_mots + V</pre>
+
+    <div class="alert alert-danger">
+      <strong>Le contre-sens classique à éviter.</strong> On lisse avec le vocabulaire <em>global</em>
+      <strong>précisément parce que</strong> spam ne contient pas tous les mots. Les mots absents (ex. « demain »)
+      sont justement ceux qui feraient <code>P = 0</code> → ce sont eux qu'il <em>faut</em> lisser. Lisser seulement
+      les mots déjà présents ne résoudrait rien.
+    </div>
+
+    <div class="alert alert-warning">
+      <strong>Le lissage est FIGÉ à l'entraînement, il ne dépend PAS du document testé.</strong>
+      Le dénominateur de spam vaut <code>36 + 54 = 90</code> <em>toujours</em>, pour tous les mots. Les 54 probas
+      existent toutes dès l'entraînement (comme un dictionnaire écrit d'avance) ; le document testé ne fait
+      qu'en <em>consulter</em> quelques-unes, il n'en crée aucune.
+    </div>
+
+    <h3>Exemple chiffré</h3>
+    <pre>P(<span class="token-yellow">'argent'</span>  | spam) = (5+1)/(36+54) = 6/90  = <span class="token-green">0.0667</span>
+P(<span class="token-yellow">'argent'</span>  | ham ) = (0+1)/(38+54) = 1/92  = <span class="token-green">0.0109</span>
+P(<span class="token-yellow">'demain'</span>  | spam) = (0+1)/(36+54) = 1/90  = <span class="token-green">0.0111</span>   <span class="token-gray">← absent de spam, mais ≠ 0 grâce au lissage</span>
+P(<span class="token-yellow">'licorne'</span> | spam) = (0+1)/(36+54) = 1/90  = <span class="token-green">0.0111</span>   <span class="token-gray">← mot inconnu partout : mini-proba quand même</span></pre>
+  </div>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <h2>L'arbre des probabilités</h2>
+
+  <p>Naïve Bayes <strong>est</strong> un arbre de probabilités. Pour « tomber sur » les mots d'un email, il y a deux chemins : passer d'abord par le monde spam, ou par le monde ham, puis enchaîner les mots.</p>
+
+  <div class="card">
+    <pre class="tree">                    <span class="token-purple">racine</span> (un email au hasard)
+                   /                          \
+          <span class="token-red">P(spam)=0.5</span>                   <span class="token-green">P(ham)=0.5</span>      <span class="token-gray">← le PRIOR (péage d'entrée, payé 1 fois)</span>
+              |                                |
+        ┌─ monde spam ─┐                ┌─ monde ham ─┐
+        |  <span class="token-pink">×</span> P(argent|spam)             |  <span class="token-pink">×</span> P(argent|ham)
+        |  <span class="token-pink">×</span> P(gratuit|spam)            |  <span class="token-pink">×</span> P(gratuit|ham)     <span class="token-gray">← les mots se MULTIPLIENT</span>
+        |  <span class="token-pink">×</span> P(maintenant|spam)         |  <span class="token-pink">×</span> P(maintenant|ham)      le long de la branche
+        ▼                                ▼
+   <span class="token-red">FEUILLE spam</span>                      <span class="token-green">FEUILLE ham</span>
+  = 0.5 × 0.0667×0.0333×0.0333      = 0.5 × 0.0109×0.0109×0.0109
+  = <span class="token-yellow">0.0000370</span>                       = <span class="token-yellow">0.0000006</span>
+        \                                /
+         \________________ <span class="token-pink">+</span> ________________/      <span class="token-gray">← on ADDITIONNE les feuilles</span>
+                          ▼
+                    P(mots) = 0.0000376</pre>
+
+    <div class="distinction">
+      <div class="distinction-box" style="border-color:#34d39933;">
+        <h4 style="color:#34d399;">Règle 1 — le long d'une branche</h4>
+        <p style="font-size:0.88rem;">On <strong>MULTIPLIE</strong> : le prior (une seule fois, en entrant) × chaque P(mot|classe). Multiplier les mots = l'hypothèse « <strong>naïve</strong> » qu'ils sont indépendants.</p>
+      </div>
+      <div class="distinction-box" style="border-color:#f4373733;">
+        <h4 style="color:#f87171;">Règle 2 — entre les branches</h4>
+        <p style="font-size:0.88rem;">On <strong>ADDITIONNE</strong> les feuilles → ça donne <code>P(mots)</code>. Mais pour <em>décider</em>, on n'en a même pas besoin (voir plus bas).</p>
+      </div>
+    </div>
+
+    <div class="alert alert-important">
+      <strong>Le prior n'est multiplié qu'UNE fois par branche</strong>, tout en haut — pas une fois par mot.
+      Une feuille = <code>prior × (produit de tous les mots)</code>. Pour classer, il suffit de comparer
+      la <span class="pill pill-spam">feuille spam</span> et la <span class="pill pill-ham">feuille ham</span> :
+      0.0000370 &gt; 0.0000006 → <strong>SPAM</strong>.
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <h2>PHASE 2 — La prédiction = un score par classe</h2>
+
+  <div class="card card-purple">
+    <h3>Le théorème de Bayes : « retourner » la question</h3>
+    <p>Ce qu'on veut, <code>P(classe|mots)</code>, on ne sait pas le mesurer directement. Bayes le réécrit avec des quantités qu'on <strong>sait compter</strong> :</p>
+    <div class="formula">
+      P(classe <span class="op">|</span> mots) =
+      <span class="hi">P(classe)</span> <span class="mut">×</span> <span class="hi">P(mots | classe)</span> <span class="op">/</span> P(mots)
+      <small>« proba de la classe sachant les mots » devient « proba des mots sachant la classe » × prior, le tout normalisé</small>
+    </div>
+    <div class="alert alert-info"><strong>C'est tout ce que fait le théorème de Bayes :</strong> retourner la conditionnelle. Il ne parle <em>pas</em> d'addition ni de logarithme.</div>
+  </div>
+
+  <!-- Two zeros -->
+  <div class="card card-red">
+    <h3>Deux problèmes de « zéro » distincts → deux remèdes distincts</h3>
+    <div class="distinction">
+      <div class="distinction-box" style="border-color:#fbbf2433;">
+        <h4 style="color:#fbbf24;">Zéro exact</h4>
+        <p style="font-size:0.88rem;"><strong>Cause :</strong> un mot jamais vu dans la classe → <code>0/total = 0</code> → <code>log(0) = −∞</code>.</p>
+        <p style="font-size:0.88rem; margin-top:6px;"><strong>Remède :</strong> le <span class="tag tag-orange">lissage +1 / +V</span></p>
+      </div>
+      <div class="distinction-box" style="border-color:#a78bfa33;">
+        <h4 style="color:#a78bfa;">Underflow (zéro par écrasement)</h4>
+        <p style="font-size:0.88rem;"><strong>Cause :</strong> multiplier plein de probas &lt; 1 → un nombre si minuscule que l'ordinateur l'arrondit à <code>0</code>.</p>
+        <p style="font-size:0.88rem; margin-top:6px;"><strong>Remède :</strong> le <span class="tag tag-purple">logarithme</span></p>
+      </div>
+    </div>
+    <div class="alert alert-warning">Le lissage ne règle <strong>pas</strong> l'underflow, et le log ne règle <strong>pas</strong> le zéro exact. Deux outils, deux maux.</div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <h3>Le log transforme la multiplication en addition</h3>
+    <p>Propriété purement mathématique du logarithme — <strong>rien à voir avec Bayes</strong> :</p>
+    <div class="formula">
+      log( a <span class="mut">×</span> b <span class="mut">×</span> c ) = log(a) <span class="op">+</span> log(b) <span class="op">+</span> log(c)
+    </div>
+    <p>Au lieu de multiplier des probas qui s'écrasent vers 0, on <strong>additionne leurs logs</strong> (des nombres négatifs sains). Le log « étale » les nombres minuscules en valeurs maniables, et <strong>ne change pas le classement</strong> (fonction croissante).</p>
+    <div class="formula">
+      score(classe) = log <span class="hi">P(classe)</span> <span class="op">+</span> Σ log <span class="hi">P(mot | classe)</span>
+      <small>un score par classe ; chaque mot ajoute son « vote »</small>
+    </div>
+  </div>
+
+  <!-- Why drop P(mots) -->
+  <div class="card card-green">
+    <h3>Pourquoi on jette P(mots) — le symbole ∝</h3>
+    <p><code>∝</code> signifie « <strong>proportionnel à</strong> » = « égal à un facteur constant près » (<code>A = k × B</code>).</p>
+    <div class="formula">
+      P(spam|mots) <span class="op">∝</span> <span class="hi">P(spam) × P(mots|spam)</span>
+      <small>le facteur constant jeté est k = 1 / P(mots)</small>
+    </div>
+    <p><code>P(mots)</code> est <strong>le même nombre</strong> pour spam et pour ham (il ne dépend pas de la classe). Diviser les deux scores par la même constante ne change pas lequel est le plus grand → inutile pour <em>décider</em>. On l'ignore.</p>
+    <div class="alert alert-danger">
+      <strong>Ne pas confondre deux divisions !</strong>
+      <ul style="margin:8px 0 0 18px; font-size:0.9rem;">
+        <li>La division <code>/(total_mots + V)</code> est <strong>interne à chaque classe</strong> (le lissage) — elle vaut 90 pour spam, 92 pour ham : <em>différente</em> par classe.</li>
+        <li>La division <code>/ P(mots)</code> est <strong>globale</strong> (Bayes) — identique pour toutes les classes : c'est <em>celle-là</em> qu'on jette.</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <h2>Exemple complet : « Gagnez de l'argent gratuit maintenant »</h2>
+
+  <div class="card">
+    <p>On déroule exactement ce que fait le code. Chaque mot ajoute son <code>log P(mot|classe)</code>.</p>
+    <table class="matrix">
+      <tr><th>élément</th><th>log P(·|spam)</th><th>log P(·|ham)</th><th>penche</th></tr>
+      <tr><td class="row-label">PRIOR</td><td>−0.693</td><td>−0.693</td><td>=</td></tr>
+      <tr><td class="row-label">gagnez</td><td>−3.401</td><td>−4.522</td><td><span class="pill pill-spam">spam</span></td></tr>
+      <tr><td class="row-label">de</td><td>−3.401</td><td>−4.522</td><td><span class="pill pill-spam">spam</span></td></tr>
+      <tr><td class="row-label">l</td><td>−3.401</td><td>−4.522</td><td><span class="pill pill-spam">spam</span></td></tr>
+      <tr class="highlight"><td class="row-label">argent</td><td>−2.708</td><td>−4.522</td><td>spam (fort)</td></tr>
+      <tr><td class="row-label">gratuit</td><td>−3.401</td><td>−4.522</td><td><span class="pill pill-spam">spam</span></td></tr>
+      <tr><td class="row-label">maintenant</td><td>−3.401</td><td>−4.522</td><td><span class="pill pill-spam">spam</span></td></tr>
+      <tr><th>TOTAL</th><th style="color:#f87171;">−20.41</th><th style="color:#34d399;">−27.82</th><th></th></tr>
+    </table>
+    <div class="alert alert-success">
+      <strong>−20.41 &gt; −27.82</strong> (plus proche de zéro = plus grand = plus probable) → <strong>VERDICT : SPAM</strong> ✅<br>
+      « argent » penche le plus fort (écart 1.8) car c'est le mot le plus typé spam du corpus (5 occurrences).
+    </div>
+    <p style="font-size:0.9rem; color:#94a3b8;">Bonus — si on <em>voulait</em> le pourcentage : l'écart de log (7.41) donne
+    <code>1/(1+e<sup>−7.41</sup>) ≈ 99.9 %</code> de spam. Mais le code ne le calcule jamais : comparer les deux scores suffit. C'est tout le sens du <code>∝</code>.</p>
+  </div>
+
+  <hr>
+
+  <!-- ============================================================ -->
+  <h2>Les 3 idées à ne jamais mélanger</h2>
+  <div class="distinction" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="distinction-box" style="border-color:#60a5fa33;">
+      <h4 style="color:#60a5fa;">Théorème de Bayes</h4>
+      <p style="font-size:0.85rem;">La <strong>formule</strong> qui retourne <code>P(classe|mots)</code> en <code>P(mots|classe)×prior</code>.</p>
+    </div>
+    <div class="distinction-box" style="border-color:#34d39933;">
+      <h4 style="color:#34d399;">« Naïve »</h4>
+      <p style="font-size:0.85rem;">L'<strong>hypothèse</strong> que les mots sont indépendants → autorise à <em>multiplier</em> les P(mot|classe).</p>
+    </div>
+    <div class="distinction-box" style="border-color:#a78bfa33;">
+      <h4 style="color:#a78bfa;">Le logarithme</h4>
+      <p style="font-size:0.85rem;">Une <strong>astuce de calcul</strong> : produit → somme, pour éviter l'underflow. Indépendant de Bayes.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-important" style="margin-top:24px;">
+    <strong>Le résumé de tout :</strong> on compte les mots par classe (4 ingrédients) → on lisse pour éviter le zéro exact →
+    Bayes retourne la question, le « naïf » autorise à multiplier → le log change le produit en somme pour éviter l'underflow →
+    on jette <code>P(mots)</code> car commun aux classes → le plus grand score gagne.
+  </div>
+
+</div>
+</body>
+</html>

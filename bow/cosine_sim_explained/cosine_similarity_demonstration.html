@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cosine similarity — le cheminement complet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBF7EE; --paper2:#F3ECDD; --ink:#211C15; --ink2:#5C5347; --ink3:#8A7F6E;
+    --line:#E0D6C2; --line2:#CDC0A6;
+    --teal:#0F6E56; --teal-bg:#E3F1EB;
+    --coral:#B0431C; --coral-bg:#F8E9E1;
+    --purple:#534AB7; --purple-bg:#EAE8F8;
+    --amber:#9A6B07; --amber-bg:#F7EDD5;
+    --card:#FFFDF8;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+    --disp:'Fraunces',Georgia,serif;
+    --mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#181410; --paper2:#211B14; --ink:#F2EADb; --ink2:#C3B7A2; --ink3:#8D8068;
+      --line:#332B20; --line2:#473C2C;
+      --teal:#5DCAA5; --teal-bg:#11302A;
+      --coral:#E58F66; --coral-bg:#371F14;
+      --purple:#A79EE8; --purple-bg:#221F3A;
+      --amber:#D7A33F; --amber-bg:#312712;
+      --card:#1F1910;
+    }
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);font-size:18px;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:230px 1fr;gap:48px}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr;gap:0}.toc{display:none}}
+
+  header.hero{border-bottom:1px solid var(--line);background:var(--paper2)}
+  .hero-in{max-width:1180px;margin:0 auto;padding:54px 24px 40px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin:0 0 14px}
+  h1{font-family:var(--disp);font-weight:600;font-size:clamp(34px,6vw,60px);line-height:1.04;margin:0 0 18px;letter-spacing:-.015em}
+  h1 em{font-style:italic;color:var(--coral)}
+  .lede{font-size:20px;color:var(--ink2);max-width:680px;margin:0}
+  .lede code{font-family:var(--mono);font-size:.85em;background:var(--purple-bg);color:var(--purple);padding:1px 6px;border-radius:5px}
+
+  .toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:40px 0;font-family:var(--mono);font-size:12.5px;line-height:1.5}
+  .toc .t-title{letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;font-size:11px}
+  .toc a{display:block;color:var(--ink2);text-decoration:none;padding:6px 0;border-left:2px solid transparent;padding-left:12px;transition:.15s}
+  .toc a:hover{color:var(--ink);border-color:var(--line2)}
+  .toc a.on{color:var(--teal);border-color:var(--teal)}
+  .toc .num{color:var(--ink3);margin-right:8px}
+
+  main{padding:48px 0 120px;min-width:0}
+  section{margin:0 0 64px;scroll-margin-top:20px}
+  h2{font-family:var(--disp);font-weight:600;font-size:30px;line-height:1.12;letter-spacing:-.01em;margin:0 0 6px}
+  .sec-num{font-family:var(--mono);font-size:13px;color:var(--teal);letter-spacing:.1em;display:block;margin-bottom:10px}
+  h3{font-family:var(--disp);font-weight:500;font-size:21px;margin:34px 0 8px}
+  p{margin:0 0 16px}
+  strong{font-weight:600}
+  a.inl{color:var(--coral);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+
+  code{font-family:var(--mono);font-size:.84em;background:var(--paper2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+  .vec-a{color:var(--teal);font-weight:600}
+  .vec-b{color:var(--coral);font-weight:600}
+  .vec-t{color:var(--purple);font-weight:600}
+
+  .math{font-family:var(--mono);font-size:15px;line-height:1.9;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--line2);border-radius:8px;padding:14px 18px;margin:18px 0;overflow-x:auto}
+  .math b{color:var(--purple);font-weight:500}
+
+  .callout{border-radius:10px;padding:18px 20px 18px 20px;margin:22px 0;border:1px solid var(--line);position:relative}
+  .callout .lab{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:500;margin-bottom:8px}
+  .callout p{margin:0 0 10px}.callout p:last-child{margin:0}
+  .callout svg{width:15px;height:15px;flex:none}
+  .block{background:var(--coral-bg);border-color:transparent}
+  .block .lab{color:var(--coral)}
+  .key{background:var(--teal-bg);border-color:transparent}
+  .key .lab{color:var(--teal)}
+  .recap{background:var(--purple-bg);border-color:transparent}
+  .recap .lab{color:var(--purple)}
+  .q{font-style:italic;color:var(--ink2)}
+
+  .widget{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:24px 0}
+  .widget .wlab{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .widget svg{width:100%;display:block}
+  .stage{background:var(--paper2);border-radius:10px;padding:8px}
+  .ctrl{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .ctrl label{font-size:14px;font-family:var(--serif)}
+  .ctrl .val{font-family:var(--mono);font-size:13px;font-weight:500;min-width:42px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;height:4px;background:var(--line2);border-radius:3px;flex:1;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--teal);cursor:pointer;border:3px solid var(--card)}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--teal);cursor:pointer;border:3px solid var(--card)}
+  button.btn{font-family:var(--mono);font-size:12.5px;background:transparent;border:1px solid var(--line2);color:var(--ink);padding:9px 14px;border-radius:8px;cursor:pointer;transition:.15s;width:100%}
+  button.btn:hover{background:var(--paper2)}
+  button.btn:active{transform:scale(.99)}
+  .panel{background:var(--paper2);border-radius:9px;padding:12px 14px;margin-top:14px;font-family:var(--mono);font-size:12.5px;line-height:1.95}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}.ctrl{flex-wrap:wrap}}
+
+  /* progression map */
+  .map{display:flex;flex-direction:column;gap:0;margin:24px 0}
+  .step{display:flex;gap:16px;position:relative;padding-bottom:22px}
+  .step:not(:last-child)::before{content:"";position:absolute;left:17px;top:36px;bottom:0;width:2px;background:var(--line2)}
+  .step .dot{flex:none;width:36px;height:36px;border-radius:50%;background:var(--teal);color:var(--paper);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:500;font-size:15px;z-index:1}
+  .step .sc{padding-top:5px}
+  .step .sc b{font-family:var(--disp);font-weight:500;font-size:17px;display:block;margin-bottom:2px}
+  .step .sc span{color:var(--ink2);font-size:15.5px}
+
+  .gauge{height:12px;border-radius:6px;background:linear-gradient(90deg,#C0432B,#cabba0,#0F6E56);position:relative;margin:6px 0 4px}
+  .gauge .mk{position:absolute;top:-4px;width:3px;height:20px;background:var(--ink);border-radius:2px;transform:translateX(-50%)}
+  .gscale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink3)}
+
+  table.tg{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px}
+  table.tg th,table.tg td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  table.tg th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);font-weight:500}
+  table.tg td:first-child{font-family:var(--mono);font-size:13px}
+
+  footer{border-top:1px solid var(--line);color:var(--ink3);font-size:14px;padding:30px 0;text-align:center;font-family:var(--mono)}
+  .hl{background:linear-gradient(transparent 62%, var(--amber-bg) 62%);padding:0 1px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-in">
+    <p class="kicker">Notes de compréhension · du blocage à l'intuition</p>
+    <h1>La <em>cosine similarity</em>,<br>démontée pièce par pièce</h1>
+    <p class="lede">Tout le cheminement pour comprendre <em>pourquoi</em> le produit scalaire de deux vecteurs unitaires vaut le cosinus de l'angle entre eux : <code>â·b̂ = cos θ</code>. Chaque marche est posée lentement, et chaque point qui a coincé est mis en évidence.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc" id="toc">
+    <div class="t-title">Sommaire</div>
+    <a href="#but"><span class="num">00</span>Le but &amp; la carte</a>
+    <a href="#normaliser"><span class="num">01</span>Normaliser</a>
+    <a href="#coord"><span class="num">02</span>Coordonnées = cos &amp; sin</a>
+    <a href="#origine"><span class="num">03</span>D'où vient cos = adj/hyp</a>
+    <a href="#scalaire"><span class="num">04</span>Le produit scalaire</a>
+    <a href="#strategie"><span class="num">05</span>La stratégie : le pont</a>
+    <a href="#triangles"><span class="num">06</span>Les trois triangles</a>
+    <a href="#mesure1"><span class="num">07</span>1ʳᵉ mesure de la corde</a>
+    <a href="#glissement"><span class="num">08</span>Le glissement</a>
+    <a href="#mesure2"><span class="num">09</span>2ᵉ mesure de la corde</a>
+    <a href="#conclusion"><span class="num">10</span>On égale &amp; on conclut</a>
+    <a href="#sens"><span class="num">11</span>Le sens &amp; le NLP</a>
+    <a href="#meta"><span class="num">12</span>La leçon de méthode</a>
+  </nav>
+
+  <main>
+
+  <!-- 00 -->
+  <section id="but">
+    <span class="sec-num">00 — Point de départ</span>
+    <h2>Le but, et la carte du voyage</h2>
+    <p>On veut comprendre une seule égalité. Deux vecteurs <span class="vec-a">a</span> et <span class="vec-b">b</span> ; on s'intéresse à l'angle <span class="vec-t">θ</span> entre eux. L'affirmation à élucider :</p>
+    <div class="math">â·b̂ = cos <b>θ</b></div>
+    <p>« Le produit scalaire de deux vecteurs <strong>unitaires</strong> est égal au cosinus de l'angle qui les sépare. » Le mot-clé est <em>unitaires</em> : des vecteurs de longueur 1. Avant toute démonstration, voici de quoi jouer avec l'idée — attrape le bout des deux flèches et déplace-les.</p>
+
+    <div class="widget">
+      <div class="wlab">Interactif · le bac à sable</div>
+      <div class="stage">
+        <svg id="w1" viewBox="0 0 600 380" style="touch-action:none"></svg>
+      </div>
+      <div class="panel" id="w1p"></div>
+    </div>
+
+    <p>Tu remarqueras deux choses en jouant : <strong>(1)</strong> allonger une flèche sans changer sa direction ne change pas <code>cos θ</code> (la longueur est ignorée) ; <strong>(2)</strong> la valeur vit toujours entre −1 et +1. C'est une <strong>jauge d'alignement</strong>. Voici la carte des marches qu'on va gravir pour la démontrer :</p>
+
+    <div class="map">
+      <div class="step"><div class="dot">1</div><div class="sc"><b>Normaliser</b><span>Poser les deux vecteurs sur le cercle de rayon 1.</span></div></div>
+      <div class="step"><div class="dot">2</div><div class="sc"><b>Lire les coordonnées</b><span>Un vecteur unitaire à l'angle α a pour coordonnées [cos α, sin α].</span></div></div>
+      <div class="step"><div class="dot">3</div><div class="sc"><b>Construire le pont : la corde</b><span>Mesurer la distance entre les deux pointes — de deux façons.</span></div></div>
+      <div class="step"><div class="dot">4</div><div class="sc"><b>Égaler les deux mesures</b><span>Même corde ⟹ deux écritures égales ⟹ â·b̂ = cos θ.</span></div></div>
+      <div class="step"><div class="dot">5</div><div class="sc"><b>Donner du sens</b><span>Une jauge entre −1 et 1 — et son usage en NLP.</span></div></div>
+    </div>
+  </section>
+
+  <!-- 01 -->
+  <section id="normaliser">
+    <span class="sec-num">01 — Première brique</span>
+    <h2>Normaliser, ou jeter la longueur</h2>
+    <p>Normaliser un vecteur, c'est le diviser par sa propre longueur. <code>âₓ = aₓ / ‖a‖</code>. Le résultat est un vecteur de longueur 1, qui pointe dans la même direction. On le « pose » sur le cercle de rayon 1, le <em>cercle unité</em>.</p>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — les unités (cm → cos ?)</span>
+      <p class="q">« On passe de valeurs en cm à une valeur cos, ça me perturbe. »</p>
+      <p>Le numérateur <code>aₓ</code> est en cm, le dénominateur <code>‖a‖</code> aussi. Donc <code>cm / cm = nombre pur</code>, sans unité : les cm s'annulent. Normaliser n'est pas juste « rapetisser » — c'est l'étape qui transforme des longueurs en <strong>ratios sans dimension</strong>. Et un ratio « côté / hypoténuse » est exactement la définition d'un cosinus. Après normalisation, il n'y a plus un seul cm nulle part : que des cos et des sin.</p>
+    </div>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — pourquoi entre −1 et 1 ?</span>
+      <p>Un vecteur unitaire vit <em>sur</em> le cercle de rayon 1. Aucun point de ce cercle ne dépasse 1 ni ne descend sous −1, ni horizontalement, ni verticalement. Donc chaque coordonnée hérite automatiquement de ces bornes. (Attention : les deux coordonnées ne sont pas libres — elles doivent vérifier <code>cos²α + sin²α = 1</code>. On ne peut pas avoir [1, 1].)</p>
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section id="coord">
+    <span class="sec-num">02 — Deuxième brique</span>
+    <h2>Les coordonnées d'un vecteur unitaire <em>sont</em> cos et sin</h2>
+    <p>Prends un vecteur unitaire à l'angle α. Descends une verticale de sa pointe jusqu'à l'axe horizontal : tu fabriques un triangle rectangle. L'hypoténuse est le vecteur (longueur 1), la jambe horizontale est sa coordonnée x, la jambe verticale sa coordonnée y. Bouge le curseur :</p>
+
+    <div class="widget">
+      <div class="wlab">Interactif · décomposition d'un vecteur</div>
+      <div class="ctrl"><label>angle α</label><input type="range" id="w2s" min="0" max="359" value="52"><span class="val" id="w2v">52°</span></div>
+      <div class="stage"><svg id="w2" viewBox="0 0 600 340"></svg></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel" style="margin:0"><span class="vec-a">coordonnée x</span> = cos α = <b id="w2cx">0.62</b></div>
+        <div class="panel" style="margin:0"><span class="vec-b">coordonnée y</span> = sin α = <b id="w2cy">0.79</b></div>
+      </div>
+    </div>
+
+    <p>Pourquoi <em>exactement</em> cos et sin ? Par la définition dans un triangle rectangle : <code>cos α = adjacent ÷ hypoténuse</code>. Ici l'hypoténuse vaut 1, donc <code>cos α = adjacent ÷ 1 = adjacent</code> = la jambe horizontale = la coordonnée x. Le <code>÷ 1</code> fait tout : le ratio devient directement la coordonnée. Conclusion :</p>
+    <div class="math">vecteur unitaire à l'angle α &nbsp;⟹&nbsp; coordonnées [cos α, sin α]</div>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — cos α, c'est une des deux flèches ?</span>
+      <p class="q">« cos α c'est la flèche verte ? sin α c'est l'orange ? »</p>
+      <p>Non. <code>cos α</code> et <code>sin α</code> ne sont pas les deux vecteurs <span class="vec-a">a</span> et <span class="vec-b">b</span>. Ce sont les deux <strong>jambes d'un seul</strong> vecteur : son ombre horizontale et son ombre verticale. Un vecteur, deux jambes, qui valent cos et sin de <em>son</em> angle.</p>
+    </div>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — pourquoi x↔cos et y↔sin ?</span>
+      <p>L'angle α se mesure <strong>depuis l'axe x</strong>. Le côté qui longe x est donc l'<em>adjacent</em> (collé à l'angle) → cosinus. Le côté vertical est l'<em>opposé</em> → sinus. Ce n'est pas arbitraire : si on mesurait l'angle depuis l'axe y, tout s'inverserait. Les noms suivent l'axe de référence.</p>
+    </div>
+  </section>
+
+  <!-- 03 -->
+  <section id="origine">
+    <span class="sec-num">03 — La brique sous la brique</span>
+    <h2>D'où sort <code>cos = adjacent ÷ hypoténuse</code> ?</h2>
+    <p>C'est la définition du cosinus — mais une définition qui se mérite. Prends un triangle rectangle d'angle α et agrandis-le : tous les côtés grandissent ensemble, mais la <strong>forme</strong> ne change pas, donc le <strong>rapport</strong> entre deux côtés reste figé. Le rapport <code>adjacent ÷ hypoténuse</code> ne dépend donc que de l'angle, jamais de la taille. Un nombre si utile méritait un nom : on l'a appelé <em>cosinus de α</em>.</p>
+
+    <div class="widget">
+      <div class="wlab">Interactif · le rapport ne dépend que de l'angle</div>
+      <div class="grid2">
+        <div class="ctrl"><label>taille</label><input type="range" id="w3sz" min="1" max="3" value="2.4" step="0.1"><span class="val" id="w3szv">2.4</span></div>
+        <div class="ctrl"><label>angle α</label><input type="range" id="w3al" min="10" max="80" value="40"><span class="val" id="w3alv">40°</span></div>
+      </div>
+      <div class="stage"><svg id="w3" viewBox="0 0 600 300"></svg></div>
+      <div class="panel" id="w3p"></div>
+    </div>
+    <p>Bouge <strong>taille</strong> : les longueurs changent, mais <code>adjacent ÷ hypoténuse</code> ne bouge pas. Bouge <strong>angle</strong> : le rapport change. C'est exactement « cos α est ce rapport constant que partagent tous les triangles d'angle α ».</p>
+  </section>
+
+  <!-- 04 -->
+  <section id="scalaire">
+    <span class="sec-num">04 — L'objet central</span>
+    <h2>Le produit scalaire, en clair</h2>
+    <p>Le produit scalaire suit une règle simple : on multiplie les coordonnées qui se correspondent, et on additionne. Avec <code>â = [cos α, sin α]</code> et <code>b̂ = [cos β, sin β]</code> :</p>
+    <div class="math">â·b̂ = (cos α)(cos β) + (sin α)(sin β)</div>
+    <p>Ce n'est qu'une substitution : on a remplacé chaque coordonnée par le cos/sin de l'angle du vecteur. L'observation qui suit (et qu'on va démontrer) est que cette somme retombe toujours sur <code>cos(α − β)</code>, le cosinus de l'écart. On note cet écart <span class="vec-t">θ</span>.</p>
+    <div class="callout key">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6m-5 3h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg> Idée clé — l'angle est déjà dans les coordonnées</span>
+      <p>On ne mesure jamais l'angle. On multiplie des coordonnées. Mais comme chaque coordonnée est déjà un cos ou un sin, l'opération recrache <code>cos(α − β)</code> toute seule. L'angle <em>sort</em> de l'arithmétique.</p>
+    </div>
+  </section>
+
+  <!-- 05 -->
+  <section id="strategie">
+    <span class="sec-num">05 — La stratégie</span>
+    <h2>Comment relier deux mondes : le pont</h2>
+    <p>Le but est <code>â·b̂ = cos θ</code>. Mais ces deux expressions semblent venir de mondes différents (un calcul de coordonnées d'un côté, un cosinus d'angle de l'autre). Il n'y a pas de pont direct. L'astuce : trouver une <strong>troisième quantité</strong> qu'on sait écrire des deux façons. Ici, ce sera la <strong>corde</strong> — la distance entre les deux pointes.</p>
+
+    <div class="widget">
+      <div class="wlab">Schéma · la stratégie du pont</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;font-family:var(--mono);padding:14px 0">
+        <div style="text-align:center"><div style="font-size:20px;font-weight:500;color:var(--teal)">â·b̂</div><div style="font-size:12px;color:var(--ink3)">les coordonnées</div></div>
+        <div style="font-size:22px;color:var(--ink3)">⟵</div>
+        <div style="text-align:center;background:var(--purple-bg);border-radius:10px;padding:12px 18px"><div style="font-size:20px;font-weight:500;color:var(--purple)">d²</div><div style="font-size:12px;color:var(--ink3)">la corde (le pont)</div></div>
+        <div style="font-size:22px;color:var(--ink3)">⟶</div>
+        <div style="text-align:center"><div style="font-size:20px;font-weight:500;color:var(--coral)">cos θ</div><div style="font-size:12px;color:var(--ink3)">l'angle</div></div>
+      </div>
+    </div>
+
+    <p>On calcule <code>d²</code> une fois avec les vecteurs bruts (ça fait sortir <code>â·b̂</code>), puis une fois après les avoir réarrangés (ça fait sortir <code>cos θ</code>). Comme c'est la même corde, les deux résultats sont égaux — et l'égalité colle <code>â·b̂</code> et <code>cos θ</code> face à face.</p>
+    <div class="callout key">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6m-5 3h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg> Idée clé — pourquoi le pont tient</span>
+      <p>La longueur de la corde ne dépend que de l'écart <span class="vec-t">θ</span>, pas de l'orientation d'ensemble. C'est cette invariance qui autorise à dire « c'est le même <code>d²</code> des deux côtés ».</p>
+    </div>
+  </section>
+
+  <!-- 06 -->
+  <section id="triangles">
+    <span class="sec-num">06 — Ne pas confondre</span>
+    <h2>Les trois triangles</h2>
+    <p>Trois triangles rôdent dans cette histoire. Les mélanger est la source nº 1 de confusion.</p>
+    <div class="widget">
+      <div class="wlab">Schéma · trois triangles, trois usages</div>
+      <div class="stage"><svg id="w6" viewBox="0 0 600 300"></svg></div>
+    </div>
+    <table class="tg">
+      <tr><th>triangle</th><th>hypoténuse</th><th>sert à</th></tr>
+      <tr><td class="vec-a">de a</td><td>le vecteur a</td><td>trouver les coordonnées de a = [cos α, sin α]</td></tr>
+      <tr><td class="vec-b">de b</td><td>le vecteur b</td><td>trouver les coordonnées de b = [cos β, sin β]</td></tr>
+      <tr><td class="vec-t">de la corde</td><td>le segment entre les deux pointes</td><td>mesurer la distance d</td></tr>
+    </table>
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — a et b dans le même triangle ?</span>
+      <p>Non. Les coordonnées de <span class="vec-a">a</span> et <span class="vec-b">b</span> se lisent chacune dans <strong>leur propre</strong> triangle (vecteur + sa verticale). C'est seulement <em>ensuite</em>, pour mesurer la distance, qu'on relie les deux pointes par la corde et qu'on fabrique un <strong>troisième</strong> triangle.</p>
+    </div>
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — a et b doivent-ils être perpendiculaires ?</span>
+      <p>Non. Le triangle de mesure n'est pas fait avec <span class="vec-a">a</span> et <span class="vec-b">b</span> comme côtés. Ses côtés sont le <strong>déplacement horizontal</strong> et le <strong>déplacement vertical</strong> entre les deux pointes — et ces deux-là sont toujours à 90°. Pour aller de n'importe quel point à n'importe quel autre, on peut toujours faire « horizontal puis vertical » : un triangle rectangle est donc toujours disponible, même si les flèches ne sont pas perpendiculaires.</p>
+    </div>
+  </section>
+
+  <!-- 07 -->
+  <section id="mesure1">
+    <span class="sec-num">07 — Première mesure</span>
+    <h2>La corde, avec les angles bruts</h2>
+    <p>Vecteurs à leurs angles α et β. La corde relie <code>a = [cos α, sin α]</code> et <code>b = [cos β, sin β]</code>. On mesure par Pythagore : décalage horizontal au carré + décalage vertical au carré.</p>
+    <div class="math">Δx = cos α − cos β &nbsp;&nbsp; Δy = sin α − sin β
+d² = Δx² + Δy² = (cos α − cos β)² + (sin α − sin β)²</div>
+    <p>On développe les deux carrés avec <code>(u − v)² = u² − 2uv + v²</code>, puis on regroupe les carrés du même angle :</p>
+    <div class="math">d² = cos²α − 2 cos α cos β + cos²β + sin²α − 2 sin α sin β + sin²β
+d² = (cos²α + sin²α) + (cos²β + sin²β) − 2(cos α cos β + sin α sin β)
+d² = 1 + 1 − 2(cos α cos β + sin α sin β)
+<b>d² = 2 − 2(cos α cos β + sin α sin β)</b></div>
+    <p>Le morceau <code>cos α cos β + sin α sin β</code> — c'est-à-dire <code>â·b̂</code> — apparaît tout seul, préservé, sans avoir eu à lui donner une valeur. C'est le côté « coordonnées » du pont.</p>
+
+    <div class="callout key">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6m-5 3h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg> Idée clé — pourquoi cos²+sin² = 1</span>
+      <p>C'est Pythagore sur le triangle d'<em>un</em> vecteur unitaire : <code>(cos)² + (sin)² = (hypoténuse)² = 1²</code>. Autrement dit, <code>cos²α + sin²α</code> est la longueur² du vecteur — et il est unitaire, donc ça vaut 1.</p>
+    </div>
+  </section>
+
+  <!-- 08 -->
+  <section id="glissement">
+    <span class="sec-num">08 — Le réarrangement</span>
+    <h2>Le glissement : poser <span class="vec-a">a</span> sur l'axe</h2>
+    <p>Comme la corde ne dépend que de l'écart θ, on a le droit de faire tourner les deux vecteurs <strong>ensemble</strong> (en gardant leur écart) jusqu'à coucher <span class="vec-a">a</span> sur l'axe horizontal. Bouge le bouton :</p>
+
+    <div class="widget">
+      <div class="wlab">Interactif · même écart, coordonnées simplifiées</div>
+      <button class="btn" id="w8btn" style="margin-bottom:14px">faire tourner les deux pour poser a sur l'axe</button>
+      <div class="stage"><svg id="w8" viewBox="0 0 600 290"></svg></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel" style="margin:0"><span class="vec-a">a</span> : angle <b id="w8aa">—</b>° = [<b id="w8ac">—</b>]</div>
+        <div class="panel" style="margin:0"><span class="vec-b">b</span> : angle <b id="w8ba">—</b>° = [<b id="w8bc">—</b>]</div>
+      </div>
+      <div class="panel" id="w8inv" style="text-align:center"></div>
+    </div>
+
+    <p>À l'arrivée : <span class="vec-a">a</span> est à l'angle 0, donc <code>a = [cos 0, sin 0] = [1, 0]</code>. Et <span class="vec-b">b</span>, qui a suivi en gardant l'écart, se retrouve à l'angle θ, donc <code>b = [cos θ, sin θ]</code>.</p>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — pourquoi b se retrouve à l'angle θ ?</span>
+      <p>Tant que <span class="vec-a">a</span> était à un angle quelconque, « écart par rapport à a » et « angle depuis l'horizontale » étaient deux choses différentes. Mais dès que <span class="vec-a">a</span> est couché sur l'axe horizontal, les deux <strong>fusionnent</strong> : mesurer depuis a, c'est mesurer depuis l'horizontale. L'angle propre de <span class="vec-b">b</span> devient donc θ.</p>
+    </div>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — θ et β, c'est pareil ? θ est-il arbitraire ?</span>
+      <p><strong>β</strong> = l'angle propre de b (depuis l'horizontale). <strong>θ</strong> = l'écart entre b et a. Deux angles différents, qui coïncident <em>seulement</em> après le glissement (parce qu'alors a = l'horizontale). Quant à la lettre <code>θ</code> : oui, c'est une étiquette arbitraire posée sur « l'angle entre les deux vecteurs ». On aurait pu l'appeler γ. Seule compte la cohérence : même lettre, même sens, du début à la fin.</p>
+    </div>
+  </section>
+
+  <!-- 09 -->
+  <section id="mesure2">
+    <span class="sec-num">09 — Deuxième mesure</span>
+    <h2>La corde, en position simple</h2>
+    <p>Même outil (Pythagore), mais avec <code>a = [1, 0]</code> et <code>b = [cos θ, sin θ]</code>. Les décalages deviennent simples car la coordonnée y de a est nulle :</p>
+    <div class="math">Δx = cos θ − 1 &nbsp;&nbsp; Δy = sin θ − 0 = sin θ
+d² = (cos θ − 1)² + (sin θ)²</div>
+    <p>On développe <code>(cos θ − 1)² = cos²θ − 2 cos θ + 1</code>, on ajoute <code>sin²θ</code>, et on regroupe <code>cos²θ + sin²θ = 1</code> :</p>
+    <div class="math">d² = cos²θ − 2 cos θ + 1 + sin²θ
+d² = (cos²θ + sin²θ) + 1 − 2 cos θ
+d² = 1 + 1 − 2 cos θ
+<b>d² = 2 − 2 cos θ</b></div>
+
+    <div class="widget">
+      <div class="wlab">Interactif · la 2ᵉ mesure, vérifiée en direct</div>
+      <div class="ctrl"><label>écart θ</label><input type="range" id="w9s" min="15" max="155" value="50"><span class="val" id="w9v">50°</span></div>
+      <div class="stage"><svg id="w9" viewBox="0 0 600 290"></svg></div>
+      <div class="panel" id="w9p"></div>
+    </div>
+
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — l'angle droit en C « coupe » l'axe</span>
+      <p>Dans ce triangle, l'angle droit n'est pas à la pointe de a : il est en <strong>C</strong>, le pied de la verticale descendue de b, à <code>[cos θ, 0]</code>. Et c'est valable : Pythagore ne demande pas <em>où</em> est l'angle droit, seulement que les deux côtés (horizontal et vertical) soient perpendiculaires. Ils le sont toujours.</p>
+    </div>
+    <div class="callout block">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Point de blocage — c'est quoi « 2 − 2cos θ = 0.71 » dans le widget ?</span>
+      <p>C'est juste une <strong>case de vérification</strong> : elle affiche d'avance la destination du calcul, pour la comparer au chemin long <code>Δx² + Δy²</code>. Les deux affichent le même nombre, quel que soit θ — la preuve en direct que les deux écritures sont égales.</p>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section id="conclusion">
+    <span class="sec-num">10 — Le dénouement</span>
+    <h2>On égale les deux mesures</h2>
+    <p>Deux écritures de la <strong>même</strong> corde :</p>
+    <div class="math">1ʳᵉ mesure : d² = 2 − 2(cos α cos β + sin α sin β)
+2ᵉ mesure : d² = 2 − 2 cos θ</div>
+    <p>Même corde ⟹ même <code>d²</code> ⟹ on les pose égales, puis on nettoie en trois gestes :</p>
+    <div class="math">2 − 2(cos α cos β + sin α sin β) = 2 − 2 cos θ
+<span style="color:var(--ink3)">— on retire le 2 de chaque côté —</span>
+−2(cos α cos β + sin α sin β) = −2 cos θ
+<span style="color:var(--ink3)">— on divise les deux côtés par −2 —</span>
+cos α cos β + sin α sin β = cos θ</div>
+    <p>Et comme <code>cos α cos β + sin α sin β</code> est exactement <code>â·b̂</code> (multiplier les coordonnées, additionner) :</p>
+    <div class="math" style="border-left-color:var(--teal);font-size:18px;text-align:center">â·b̂ = cos <b style="color:var(--teal)">θ</b></div>
+    <p>Démontré du début à la fin, sans avoir mesuré un seul angle.</p>
+
+    <div class="widget">
+      <div class="wlab">Interactif · les deux mesures donnent le même d²</div>
+      <div class="grid2">
+        <div class="ctrl"><label>α (a)</label><input type="range" id="w10a" min="0" max="160" value="70"><span class="val" id="w10av">70°</span></div>
+        <div class="ctrl"><label>β (b)</label><input type="range" id="w10b" min="0" max="160" value="20"><span class="val" id="w10bv">20°</span></div>
+      </div>
+      <button class="btn" id="w10btn" style="margin-bottom:14px">disposition 2 : poser a sur l'axe</button>
+      <div class="stage"><svg id="w10" viewBox="0 0 600 290"></svg></div>
+      <div class="panel" id="w10p"></div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section id="sens">
+    <span class="sec-num">11 — Le sens</span>
+    <h2>Une jauge d'alignement</h2>
+    <p>La valeur <code>cos θ</code> mesure « à quel point les deux directions pointent dans le même sens », sur une échelle de −1 à +1.</p>
+    <div class="widget">
+      <div class="wlab">Repère · l'échelle de la jauge</div>
+      <div class="gauge"><div class="mk" style="left:50%"></div></div>
+      <div class="gscale"><span>−1 · opposés</span><span>0 · perpendiculaires</span><span>+1 · même sens</span></div>
+    </div>
+    <table class="tg">
+      <tr><th>cos θ</th><th>angle</th><th>signification</th></tr>
+      <tr><td>1</td><td>0°</td><td>même direction</td></tr>
+      <tr><td>0</td><td>90°</td><td>perpendiculaires — rien en commun</td></tr>
+      <tr><td>−1</td><td>180°</td><td>directions opposées</td></tr>
+    </table>
+    <p>En NLP, chaque texte devient un vecteur (les fréquences de mots). Un texte deux fois plus long a un vecteur deux fois plus long, mais qui pointe dans la même direction — même thème. En normalisant, on efface cette différence de taille pour ne comparer que la <strong>direction</strong> (le thème). La cosine similarity, c'est exactement ce <code>cos θ</code> : on se fiche de la longueur, on ne regarde que l'angle.</p>
+  </section>
+
+  <!-- 12 -->
+  <section id="meta">
+    <span class="sec-num">12 — Au-dessus du résultat</span>
+    <h2>La leçon de méthode</h2>
+    <p>Au-delà de la formule, retiens la <strong>technique de preuve</strong>, car elle est générale : <em>pour relier deux choses qui n'ont pas de pont direct, on calcule une troisième quantité de deux façons.</em> Chaque façon fait apparaître l'une des deux choses ; comme c'est la même quantité, on les égale.</p>
+    <div class="callout recap">
+      <span class="lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg> Le fil en cinq temps</span>
+      <p><strong>1.</strong> normaliser → vecteurs sur le cercle unité, coordonnées [cos α, sin α] et [cos β, sin β].<br>
+      <strong>2.</strong> pour relier le produit scalaire à l'angle, passer par la corde entre les pointes.<br>
+      <strong>3.</strong> 1ʳᵉ mesure (angles bruts) → d² = 2 − 2(â·b̂).<br>
+      <strong>4.</strong> 2ᵉ mesure (a glissé sur l'axe, b à l'angle θ) → d² = 2 − 2 cos θ.<br>
+      <strong>5.</strong> même corde ⟹ on égale ⟹ â·b̂ = cos θ.</p>
+    </div>
+    <p>Les briques (cos/sin, Pythagore, produit scalaire, formule de différence) sont scolaires. Ce qui l'est rarement, c'est de prendre le temps de toutes les relier et de refuser d'avancer tant qu'une marche n'est pas solide. C'est précisément ce qui a été fait ici.</p>
+  </section>
+
+  <footer>â·b̂ = cos θ &nbsp;·&nbsp; notes de compréhension</footer>
+  </main>
+</div>
+
+<script>
+"use strict";
+const TEAL="#1D9E75",TEALd="#0F6E56",CORAL="#D85A30",CORALd="#993C1D",PURP="#7F77DD",PURPd="#534AB7",GRY="#8A7F6E";
+function svgEl(s){return document.getElementById(s);}
+function css(v){return getComputedStyle(document.body).getPropertyValue(v).trim();}
+function L(parent,attrs){const e=document.createElementNS("http://www.w3.org/2000/svg","line");for(const k in attrs)e.setAttribute(k,attrs[k]);parent.appendChild(e);return e;}
+function el(tag,attrs){const e=document.createElementNS("http://www.w3.org/2000/svg",tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
+function defsArrow(svg,id,color){const d=el("defs",{});const m=el("marker",{id:id,markerWidth:11,markerHeight:11,refX:7,refY:3.5,orient:"auto"});const p=el("path",{d:"M0,0 L8,3.5 L0,7 Z",fill:color});m.appendChild(p);d.appendChild(m);svg.appendChild(d);}
+function txt(svg,attrs,content){const t=el("text",attrs);t.textContent=content;svg.appendChild(t);return t;}
+
+/* ---------- W1 : playground (drag two vectors) ---------- */
+(function(){
+  const svg=svgEl("w1"); const ox=300,oy=190,S=120;
+  const lineCol=css('--line2'), grid=css('--line');
+  defsArrow(svg,"w1a",TEALd); defsArrow(svg,"w1b",CORALd);
+  L(svg,{x1:40,y1:oy,x2:560,y2:oy,stroke:grid,"stroke-width":1});
+  L(svg,{x1:ox,y1:20,x2:ox,y2:360,stroke:grid,"stroke-width":1});
+  svg.appendChild(el("circle",{cx:ox,cy:oy,r:S,fill:"none",stroke:lineCol,"stroke-width":1.5,"stroke-dasharray":"5 5"}));
+  const arc=el("polyline",{fill:"none",stroke:PURP,"stroke-width":3}); svg.appendChild(arc);
+  const vA=L(svg,{x1:ox,y1:oy,stroke:TEAL,"stroke-width":3,"marker-end":"url(#w1a)"});
+  const vB=L(svg,{x1:ox,y1:oy,stroke:CORAL,"stroke-width":3,"marker-end":"url(#w1b)"});
+  const dA=el("circle",{r:5,fill:TEALd}); svg.appendChild(dA);
+  const dB=el("circle",{r:5,fill:CORALd}); svg.appendChild(dB);
+  const hA=el("circle",{r:12,fill:TEAL,"fill-opacity":0.22,stroke:TEALd,"stroke-width":1.5,style:"cursor:grab"}); svg.appendChild(hA);
+  const hB=el("circle",{r:12,fill:CORAL,"fill-opacity":0.22,stroke:CORALd,"stroke-width":1.5,style:"cursor:grab"}); svg.appendChild(hB);
+  const lA=txt(svg,{"font-size":15,"font-weight":500,fill:TEALd,"font-family":"monospace"},"a");
+  const lB=txt(svg,{"font-size":15,"font-weight":500,fill:CORALd,"font-family":"monospace"},"b");
+  let a={x:1.4,y:1.55}, b={x:2.0,y:0.5};
+  const p=document.getElementById("w1p");
+  function scr(v){return {x:ox+v.x*S,y:oy-v.y*S};}
+  function upd(){
+    const na=Math.hypot(a.x,a.y)||1e-9,nb=Math.hypot(b.x,b.y)||1e-9;
+    const ah={x:a.x/na,y:a.y/na},bh={x:b.x/nb,y:b.y/nb};
+    const cos=Math.max(-1,Math.min(1,ah.x*bh.x+ah.y*bh.y));
+    const ang=Math.acos(cos)*180/Math.PI;
+    const sa=scr(a),sb=scr(b),sah=scr(ah),sbh=scr(bh);
+    vA.setAttribute("x2",sa.x);vA.setAttribute("y2",sa.y);
+    vB.setAttribute("x2",sb.x);vB.setAttribute("y2",sb.y);
+    hA.setAttribute("cx",sa.x);hA.setAttribute("cy",sa.y);
+    hB.setAttribute("cx",sb.x);hB.setAttribute("cy",sb.y);
+    dA.setAttribute("cx",sah.x);dA.setAttribute("cy",sah.y);
+    dB.setAttribute("cx",sbh.x);dB.setAttribute("cy",sbh.y);
+    lA.setAttribute("x",sa.x+10);lA.setAttribute("y",sa.y-6);
+    lB.setAttribute("x",sb.x+10);lB.setAttribute("y",sb.y-6);
+    const tA=Math.atan2(a.y,a.x),tB=Math.atan2(b.y,b.x);
+    let diff=tB-tA; while(diff>Math.PI)diff-=2*Math.PI; while(diff<-Math.PI)diff+=2*Math.PI;
+    let pts=[];for(let i=0;i<=36;i++){const t=tA+diff*i/36;pts.push((ox+Math.cos(t)*S)+","+(oy-Math.sin(t)*S));}
+    arc.setAttribute("points",pts.join(" "));
+    const c2=cos>0.05?TEALd:(cos<-0.05?CORALd:css('--ink'));
+    const pct=((cos+1)/2*100).toFixed(0);
+    p.innerHTML="angle θ ≈ "+Math.round(ang)+"° &nbsp;·&nbsp; cosine similarity = <b style='color:"+c2+"'>"+cos.toFixed(2)+"</b>"+
+      "<div class='gauge' style='margin-top:10px'><div class='mk' style='left:"+pct+"%'></div></div>"+
+      "<div class='gscale'><span>−1</span><span>0</span><span>+1</span></div>";
+  }
+  let drag=null;
+  function pt(e){const r=svg.getBoundingClientRect();const cx=e.touches?e.touches[0].clientX:e.clientX;const cy=e.touches?e.touches[0].clientY:e.clientY;return {x:(cx-r.left)*(600/r.width),y:(cy-r.top)*(380/r.height)};}
+  hA.addEventListener("pointerdown",e=>{e.preventDefault();drag="a";});
+  hB.addEventListener("pointerdown",e=>{e.preventDefault();drag="b";});
+  window.addEventListener("pointermove",e=>{if(!drag)return;const q=pt(e);const v={x:(q.x-ox)/S,y:(oy-q.y)/S};if(Math.hypot(v.x,v.y)<0.18)return;if(drag==="a")a=v;else b=v;upd();});
+  window.addEventListener("pointerup",()=>drag=null);
+  upd();
+})();
+
+/* ---------- W2 : single vector decomposition ---------- */
+(function(){
+  const svg=svgEl("w2"),ox=300,oy=180,S=120,grid=css('--line'),lineCol=css('--line2');
+  defsArrow(svg,"w2m",css('--ink'));
+  L(svg,{x1:40,y1:oy,x2:560,y2:oy,stroke:grid,"stroke-width":1});
+  L(svg,{x1:ox,y1:20,x2:ox,y2:330,stroke:grid,"stroke-width":1});
+  svg.appendChild(el("circle",{cx:ox,cy:oy,r:S,fill:"none",stroke:lineCol,"stroke-width":1.5,"stroke-dasharray":"5 5"}));
+  const legX=L(svg,{stroke:TEAL,"stroke-width":5}),legY=L(svg,{stroke:CORAL,"stroke-width":5});
+  const rang=el("polyline",{fill:"none",stroke:GRY,"stroke-width":1.2});svg.appendChild(rang);
+  const vec=L(svg,{x1:ox,y1:oy,stroke:css('--ink'),"stroke-width":2.5,"marker-end":"url(#w2m)"});
+  const tip=el("circle",{r:4,fill:css('--ink')});svg.appendChild(tip);
+  const lX=txt(svg,{"font-size":13,"font-weight":500,fill:TEALd,"text-anchor":"middle","font-family":"monospace"},"");
+  const lY=txt(svg,{"font-size":13,"font-weight":500,fill:CORALd,"font-family":"monospace"},"");
+  const s=document.getElementById("w2s"),v=document.getElementById("w2v");
+  function upd(){const d=+s.value,a=d*Math.PI/180,c=Math.cos(a),si=Math.sin(a);v.textContent=d+"°";
+    const tx=ox+c*S,ty=oy-si*S,cx=ox+c*S;
+    vec.setAttribute("x2",tx);vec.setAttribute("y2",ty);tip.setAttribute("cx",tx);tip.setAttribute("cy",ty);
+    legX.setAttribute("x1",ox);legX.setAttribute("y1",oy);legX.setAttribute("x2",cx);legX.setAttribute("y2",oy);
+    legY.setAttribute("x1",cx);legY.setAttribute("y1",oy);legY.setAttribute("x2",tx);legY.setAttribute("y2",ty);
+    const m=12,hx=(c>=0?-1:1)*m,vy=(si>=0?-1:1)*m;
+    rang.setAttribute("points",(cx+hx)+","+oy+" "+(cx+hx)+","+(oy+vy)+" "+cx+","+(oy+vy));
+    lX.setAttribute("x",ox+c*S/2);lX.setAttribute("y",oy+(si>=0?20:-10));lX.textContent="cos α = "+c.toFixed(2);
+    lY.setAttribute("x",cx+(c>=0?40:-40));lY.setAttribute("y",oy-si*S/2+4);lY.textContent="sin α = "+si.toFixed(2);
+    document.getElementById("w2cx").textContent=c.toFixed(2);document.getElementById("w2cy").textContent=si.toFixed(2);}
+  s.addEventListener("input",upd);upd();
+})();
+
+/* ---------- W3 : constant ratio ---------- */
+(function(){
+  const svg=svgEl("w3"),ox=130,oy=255,K=68;
+  const fill=el("polygon",{fill:PURP,"fill-opacity":0.07});svg.appendChild(fill);
+  const arc=el("path",{fill:"none",stroke:PURPd,"stroke-width":1.5});svg.appendChild(arc);
+  const aLbl=txt(svg,{"font-size":15,"font-weight":500,fill:PURPd},"α");
+  const adj=L(svg,{stroke:TEAL,"stroke-width":6}),opp=L(svg,{stroke:CORAL,"stroke-width":6});
+  const rang=el("polyline",{fill:"none",stroke:GRY,"stroke-width":1.3});svg.appendChild(rang);
+  defsArrow(svg,"w3m",css('--ink'));
+  const hyp=L(svg,{stroke:css('--ink'),"stroke-width":2.5,"marker-end":"url(#w3m)"});
+  const hL=txt(svg,{"font-size":13,"font-weight":500,fill:css('--ink'),"font-family":"monospace"},"");
+  const aL=txt(svg,{"font-size":12,"font-weight":500,fill:TEALd,"text-anchor":"middle","font-family":"monospace"},"");
+  const oL=txt(svg,{"font-size":12,"font-weight":500,fill:CORALd,"font-family":"monospace"},"");
+  const sz=document.getElementById("w3sz"),al=document.getElementById("w3al"),p=document.getElementById("w3p");
+  function upd(){const h=+sz.value,deg=+al.value,a=deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+    document.getElementById("w3szv").textContent=h.toFixed(1);document.getElementById("w3alv").textContent=deg+"°";
+    const hp=h*K,cx=ox+c*hp,tx=cx,ty=oy-s*hp;
+    hyp.setAttribute("x1",ox);hyp.setAttribute("y1",oy);hyp.setAttribute("x2",tx);hyp.setAttribute("y2",ty);
+    adj.setAttribute("x1",ox);adj.setAttribute("y1",oy);adj.setAttribute("x2",cx);adj.setAttribute("y2",oy);
+    opp.setAttribute("x1",cx);opp.setAttribute("y1",oy);opp.setAttribute("x2",tx);opp.setAttribute("y2",ty);
+    fill.setAttribute("points",ox+","+oy+" "+cx+","+oy+" "+tx+","+ty);
+    const m=12;rang.setAttribute("points",(cx-m)+","+oy+" "+(cx-m)+","+(oy-m)+" "+cx+","+(oy-m));
+    const r=40;arc.setAttribute("d","M "+(ox+r)+" "+oy+" A "+r+" "+r+" 0 0 0 "+(ox+c*r)+" "+(oy-s*r));
+    aLbl.setAttribute("x",ox+r+10);aLbl.setAttribute("y",oy-12);
+    hL.setAttribute("x",(ox+tx)/2-66);hL.setAttribute("y",(oy+ty)/2-8);hL.textContent="hyp "+h.toFixed(2);
+    aL.setAttribute("x",(ox+cx)/2);aL.setAttribute("y",oy+20);aL.textContent="adj "+(h*c).toFixed(2);
+    oL.setAttribute("x",cx+10);oL.setAttribute("y",(oy+ty)/2+4);oL.textContent="opp "+(h*s).toFixed(2);
+    p.innerHTML="adjacent ÷ hypoténuse = <b style='color:"+PURPd+"'>"+((h*c)/h).toFixed(3)+"</b> &nbsp;=&nbsp; cos α = <b style='color:"+PURPd+"'>"+c.toFixed(3)+"</b><br><span style='color:"+css('--ink3')+"'>change la taille → le rapport ne bouge pas. change l'angle → il change.</span>";}
+  sz.addEventListener("input",upd);al.addEventListener("input",upd);upd();
+})();
+
+/* ---------- W6 : three triangles ---------- */
+(function(){
+  const svg=svgEl("w6"),ox=160,oy=250,S=160,grid=css('--line');
+  defsArrow(svg,"w6a",TEALd);defsArrow(svg,"w6b",CORALd);
+  L(svg,{x1:90,y1:oy,x2:560,y2:oy,stroke:grid,"stroke-width":1});
+  L(svg,{x1:ox,y1:oy+20,x2:ox,y2:30,stroke:grid,"stroke-width":1});
+  const A=32*Math.PI/180,B=68*Math.PI/180;
+  const Ax=ox+Math.cos(A)*S,Ay=oy-Math.sin(A)*S,Bx=ox+Math.cos(B)*S,By=oy-Math.sin(B)*S;
+  svg.appendChild(el("polygon",{points:ox+","+oy+" "+Ax+","+oy+" "+Ax+","+Ay,fill:TEAL,"fill-opacity":0.10}));
+  svg.appendChild(el("polygon",{points:ox+","+oy+" "+Bx+","+oy+" "+Bx+","+By,fill:CORAL,"fill-opacity":0.10}));
+  L(svg,{x1:ox,y1:oy,x2:Ax,y2:oy,stroke:TEAL,"stroke-width":2});L(svg,{x1:Ax,y1:oy,x2:Ax,y2:Ay,stroke:TEAL,"stroke-width":1.6,"stroke-dasharray":"5 3"});
+  L(svg,{x1:ox,y1:oy,x2:Bx,y2:oy,stroke:CORAL,"stroke-width":2});L(svg,{x1:Bx,y1:oy,x2:Bx,y2:By,stroke:CORAL,"stroke-width":1.6,"stroke-dasharray":"5 3"});
+  L(svg,{x1:Ax,y1:Ay,x2:Bx,y2:By,stroke:PURP,"stroke-width":3.5});
+  L(svg,{x1:ox,y1:oy,x2:Ax,y2:Ay,stroke:TEAL,"stroke-width":3.5,"marker-end":"url(#w6a)"});
+  L(svg,{x1:ox,y1:oy,x2:Bx,y2:By,stroke:CORAL,"stroke-width":3.5,"marker-end":"url(#w6b)"});
+  txt(svg,{"font-size":14,"font-weight":500,fill:TEALd,x:Ax+8,y:Ay+4,"font-family":"monospace"},"a");
+  txt(svg,{"font-size":14,"font-weight":500,fill:CORALd,x:Bx-2,y:By-8,"font-family":"monospace"},"b");
+  txt(svg,{"font-size":13,"font-weight":500,fill:PURPd,x:(Ax+Bx)/2+8,y:(Ay+By)/2-6,"font-family":"monospace"},"corde");
+  txt(svg,{"font-size":12,fill:css('--ink3'),x:ox-8,y:oy+18,"text-anchor":"end","font-family":"monospace"},"O");
+  /* legend */
+  const lx=400;
+  [["triangle de a",TEALd],["triangle de b",CORALd],["triangle de la corde",PURPd]].forEach((it,i)=>{
+    svg.appendChild(el("rect",{x:lx,y:60+i*26,width:14,height:14,fill:it[1],"fill-opacity":0.5,rx:3}));
+    txt(svg,{"font-size":12.5,fill:css('--ink2'),x:lx+22,y:71+i*26,"font-family":"monospace"},it[0]);
+  });
+})();
+
+/* ---------- W8 : slide a onto axis ---------- */
+(function(){
+  const svg=svgEl("w8"),ox=300,oy=150,S=100,grid=css('--line'),lineCol=css('--line2');
+  defsArrow(svg,"w8a",TEALd);defsArrow(svg,"w8b",CORALd);
+  const axH=L(svg,{stroke:grid,"stroke-width":1}),axV=L(svg,{stroke:grid,"stroke-width":1});
+  svg.appendChild(el("circle",{cx:ox,cy:oy,r:S,fill:"none",stroke:lineCol,"stroke-width":1.5,"stroke-dasharray":"5 5"}));
+  const arc=el("polyline",{fill:"none",stroke:PURP,"stroke-width":2.5});svg.appendChild(arc);
+  const arcL=txt(svg,{"font-size":13,"font-weight":500,fill:PURPd,"text-anchor":"middle"},"");
+  const chord=L(svg,{stroke:PURP,"stroke-width":3.5});
+  const vA=L(svg,{x1:ox,y1:oy,stroke:TEAL,"stroke-width":3,"marker-end":"url(#w8a)"});
+  const vB=L(svg,{x1:ox,y1:oy,stroke:CORAL,"stroke-width":3,"marker-end":"url(#w8b)"});
+  const lA=txt(svg,{"font-size":14,"font-weight":500,fill:TEALd,"font-family":"monospace"},"a");
+  const lB=txt(svg,{"font-size":14,"font-weight":500,fill:CORALd,"font-family":"monospace"},"b");
+  const A0=25*Math.PI/180,B0=75*Math.PI/180;
+  let phi=0,target=0,on=false,raf=null;
+  function P(an){return {x:ox+Math.cos(an)*S,y:oy-Math.sin(an)*S};}
+  function draw(){const aA=A0+phi,bA=B0+phi,pa=P(aA),pb=P(bA);
+    vA.setAttribute("x2",pa.x);vA.setAttribute("y2",pa.y);vB.setAttribute("x2",pb.x);vB.setAttribute("y2",pb.y);
+    lA.setAttribute("x",pa.x+(Math.cos(aA)>=0?8:-15));lA.setAttribute("y",pa.y-7);
+    lB.setAttribute("x",pb.x+(Math.cos(bA)>=0?8:-15));lB.setAttribute("y",pb.y-7);
+    chord.setAttribute("x1",pa.x);chord.setAttribute("y1",pa.y);chord.setAttribute("x2",pb.x);chord.setAttribute("y2",pb.y);
+    axH.setAttribute("x1",ox-Math.cos(phi)*270);axH.setAttribute("y1",oy+Math.sin(phi)*270);axH.setAttribute("x2",ox+Math.cos(phi)*270);axH.setAttribute("y2",oy-Math.sin(phi)*270);
+    axV.setAttribute("x1",ox+Math.sin(phi)*120);axV.setAttribute("y1",oy+Math.cos(phi)*120);axV.setAttribute("x2",ox-Math.sin(phi)*120);axV.setAttribute("y2",oy-Math.cos(phi)*120);
+    let pts=[],r=S*0.46;for(let i=0;i<=24;i++){const u=aA+(bA-aA)*i/24;pts.push((ox+Math.cos(u)*r)+","+(oy-Math.sin(u)*r));}
+    arc.setAttribute("points",pts.join(" "));
+    const um=(aA+bA)/2;arcL.setAttribute("x",ox+Math.cos(um)*(r+15));arcL.setAttribute("y",oy-Math.sin(um)*(r+15)+4);arcL.textContent="θ";
+    const nrm=x=>{let d=Math.round(x*180/Math.PI)%360;if(d<0)d+=360;return d;};
+    document.getElementById("w8aa").textContent=nrm(aA);document.getElementById("w8ba").textContent=nrm(bA);
+    document.getElementById("w8ac").textContent=Math.cos(aA).toFixed(2)+", "+Math.sin(aA).toFixed(2);
+    document.getElementById("w8bc").textContent=Math.cos(bA).toFixed(2)+", "+Math.sin(bA).toFixed(2);
+    const dx=Math.cos(aA)-Math.cos(bA),dy=Math.sin(aA)-Math.sin(bA);
+    document.getElementById("w8inv").innerHTML="écart θ = 50° (inchangé) &nbsp;·&nbsp; longueur d = <b style='color:"+PURPd+"'>"+Math.hypot(dx,dy).toFixed(2)+"</b> (inchangée)";}
+  function anim(){const d=target-phi;if(Math.abs(d)<0.004){phi=target;draw();raf=null;return;}phi+=d*0.16;draw();raf=requestAnimationFrame(anim);}
+  document.getElementById("w8btn").addEventListener("click",function(){on=!on;target=on?-A0:0;this.textContent=on?"revenir à la position de départ":"faire tourner les deux pour poser a sur l'axe";if(raf)cancelAnimationFrame(raf);anim();});
+  draw();
+})();
+
+/* ---------- W9 : second measurement ---------- */
+(function(){
+  const svg=svgEl("w9"),ox=240,oy=200,S=150,grid=css('--line'),lineCol=css('--line2');
+  defsArrow(svg,"w9a",TEALd);defsArrow(svg,"w9b",CORALd);
+  L(svg,{x1:90,y1:oy,x2:560,y2:oy,stroke:grid,"stroke-width":1});L(svg,{x1:ox,y1:oy+40,x2:ox,y2:30,stroke:grid,"stroke-width":1});
+  svg.appendChild(el("circle",{cx:ox,cy:oy,r:S,fill:"none",stroke:lineCol,"stroke-width":1.5,"stroke-dasharray":"5 5"}));
+  const tri=el("polygon",{fill:PURP,"fill-opacity":0.08});svg.appendChild(tri);
+  const legX=L(svg,{stroke:TEAL,"stroke-width":3}),legY=L(svg,{stroke:CORAL,"stroke-width":3});
+  const rang=el("rect",{fill:GRY,"fill-opacity":0.45});svg.appendChild(rang);
+  const chord=L(svg,{stroke:PURP,"stroke-width":4});
+  const vA=L(svg,{x1:ox,y1:oy,stroke:TEAL,"stroke-width":2.5,"stroke-opacity":0.6,"marker-end":"url(#w9a)"});
+  const vB=L(svg,{x1:ox,y1:oy,stroke:CORAL,"stroke-width":2.5,"stroke-opacity":0.6,"marker-end":"url(#w9b)"});
+  const lA=txt(svg,{"font-size":13,"font-weight":500,fill:TEALd,"font-family":"monospace"},""),lB=txt(svg,{"font-size":13,"font-weight":500,fill:CORALd,"font-family":"monospace"},"b");
+  const lD=txt(svg,{"font-size":13,"font-weight":500,fill:PURPd,"font-family":"monospace"},"d");
+  const lX=txt(svg,{"font-size":12,"font-weight":500,fill:TEALd,"text-anchor":"middle","font-family":"monospace"},"Δx");
+  const lY=txt(svg,{"font-size":12,"font-weight":500,fill:CORALd,"text-anchor":"end","font-family":"monospace"},"Δy");
+  const s=document.getElementById("w9s"),p=document.getElementById("w9p");
+  function upd(){const d=+s.value,t=d*Math.PI/180,c=Math.cos(t),si=Math.sin(t);document.getElementById("w9v").textContent=d+"°";
+    const Ax=ox+S,Ay=oy,Bx=ox+c*S,By=oy-si*S,Cx=Bx,Cy=oy;
+    vA.setAttribute("x2",Ax);vA.setAttribute("y2",Ay);vB.setAttribute("x2",Bx);vB.setAttribute("y2",By);
+    tri.setAttribute("points",Ax+","+Ay+" "+Bx+","+By+" "+Cx+","+Cy);
+    legX.setAttribute("x1",Cx);legX.setAttribute("y1",oy);legX.setAttribute("x2",Ax);legX.setAttribute("y2",oy);
+    legY.setAttribute("x1",Cx);legY.setAttribute("y1",Cy);legY.setAttribute("x2",Bx);legY.setAttribute("y2",By);
+    chord.setAttribute("x1",Ax);chord.setAttribute("y1",Ay);chord.setAttribute("x2",Bx);chord.setAttribute("y2",By);
+    const m=12,dir=(Ax>=Cx?1:-1);rang.setAttribute("x",dir>0?Cx:Cx-m);rang.setAttribute("y",oy-m);rang.setAttribute("width",m);rang.setAttribute("height",m);
+    lD.setAttribute("x",(Ax+Bx)/2+6);lD.setAttribute("y",(Ay+By)/2-6);
+    lA.setAttribute("x",Ax+6);lA.setAttribute("y",oy+20);lA.textContent="a = [1, 0]";
+    lB.setAttribute("x",Bx+(c>=0?8:-16));lB.setAttribute("y",By-7);
+    lX.setAttribute("x",(Cx+Ax)/2);lX.setAttribute("y",oy+18);
+    lY.setAttribute("x",Cx-8);lY.setAttribute("y",(oy+By)/2+4);
+    p.innerHTML="Δx = cos θ − 1 = "+(c-1).toFixed(2)+" &nbsp; Δy = sin θ = "+si.toFixed(2)+"<br>d² = Δx² + Δy² = <b style='color:"+PURPd+"'>"+((c-1)*(c-1)+si*si).toFixed(2)+"</b> &nbsp;&nbsp; 2 − 2cos θ = <b style='color:"+PURPd+"'>"+(2-2*c).toFixed(2)+"</b>";}
+  s.addEventListener("input",upd);upd();
+})();
+
+/* ---------- W10 : two dispositions, same d2 ---------- */
+(function(){
+  const svg=svgEl("w10"),ox=300,oy=150,S=105,grid=css('--line'),lineCol=css('--line2');
+  defsArrow(svg,"w10a",TEALd);defsArrow(svg,"w10b",CORALd);
+  const axH=L(svg,{stroke:grid,"stroke-width":1}),axV=L(svg,{stroke:grid,"stroke-width":1});
+  svg.appendChild(el("circle",{cx:ox,cy:oy,r:S,fill:"none",stroke:lineCol,"stroke-width":1.5,"stroke-dasharray":"5 5"}));
+  const arc=el("polyline",{fill:"none",stroke:PURP,"stroke-width":2.5});svg.appendChild(arc);
+  const arcL=txt(svg,{"font-size":13,"font-weight":500,fill:PURPd,"text-anchor":"middle"},"");
+  const chord=L(svg,{stroke:PURP,"stroke-width":4});
+  const vA=L(svg,{x1:ox,y1:oy,stroke:TEAL,"stroke-width":3,"marker-end":"url(#w10a)"});
+  const vB=L(svg,{x1:ox,y1:oy,stroke:CORAL,"stroke-width":3,"marker-end":"url(#w10b)"});
+  const lA=txt(svg,{"font-size":14,"font-weight":500,fill:TEALd,"font-family":"monospace"},"a"),lB=txt(svg,{"font-size":14,"font-weight":500,fill:CORALd,"font-family":"monospace"},"b");
+  const sa=document.getElementById("w10a"),sb=document.getElementById("w10b"),p=document.getElementById("w10p");
+  let phi=0,target=0,on=false,raf=null;
+  function P(an){return {x:ox+Math.cos(an)*S,y:oy-Math.sin(an)*S};}
+  function draw(){
+    const al=(+sa.value)*Math.PI/180,be=(+sb.value)*Math.PI/180;
+    const aA=al+phi,bA=be+phi,pa=P(aA),pb=P(bA);
+    vA.setAttribute("x2",pa.x);vA.setAttribute("y2",pa.y);vB.setAttribute("x2",pb.x);vB.setAttribute("y2",pb.y);
+    lA.setAttribute("x",pa.x+(Math.cos(aA)>=0?8:-15));lA.setAttribute("y",pa.y-7);
+    lB.setAttribute("x",pb.x+(Math.cos(bA)>=0?8:-15));lB.setAttribute("y",pb.y-7);
+    chord.setAttribute("x1",pa.x);chord.setAttribute("y1",pa.y);chord.setAttribute("x2",pb.x);chord.setAttribute("y2",pb.y);
+    axH.setAttribute("x1",ox-Math.cos(phi)*280);axH.setAttribute("y1",oy+Math.sin(phi)*280);axH.setAttribute("x2",ox+Math.cos(phi)*280);axH.setAttribute("y2",oy-Math.sin(phi)*280);
+    axV.setAttribute("x1",ox+Math.sin(phi)*125);axV.setAttribute("y1",oy+Math.cos(phi)*125);axV.setAttribute("x2",ox-Math.sin(phi)*125);axV.setAttribute("y2",oy-Math.cos(phi)*125);
+    let pts=[],r=S*0.46,df=bA-aA;for(let i=0;i<=24;i++){const u=aA+df*i/24;pts.push((ox+Math.cos(u)*r)+","+(oy-Math.sin(u)*r));}
+    arc.setAttribute("points",pts.join(" "));
+    const um=aA+df/2;arcL.setAttribute("x",ox+Math.cos(um)*(r+15));arcL.setAttribute("y",oy-Math.sin(um)*(r+15)+4);arcL.textContent="θ";
+    const ca=Math.cos(al),saA=Math.sin(al),cb=Math.cos(be),sbB=Math.sin(be);
+    const dot=ca*cb+saA*sbB, th=be-al, d2=2-2*dot;
+    document.getElementById("w10av").textContent=(+sa.value)+"°";document.getElementById("w10bv").textContent=(+sb.value)+"°";
+    p.innerHTML="disposition 1 : d² = 2 − 2(cos α cos β + sin α sin β) = <b style='color:"+PURPd+"'>"+d2.toFixed(2)+"</b><br>"+
+      "disposition 2 : d² = 2 − 2cos θ = <b style='color:"+PURPd+"'>"+(2-2*Math.cos(th)).toFixed(2)+"</b><br>"+
+      "<span style='color:"+css('--ink3')+"'>même d² ⟹</span> â·b̂ = cos θ = <b style='color:"+TEALd+"'>"+dot.toFixed(2)+"</b>";}
+  function anim(){const d=target-phi;if(Math.abs(d)<0.004){phi=target;draw();raf=null;return;}phi+=d*0.16;draw();raf=requestAnimationFrame(anim);}
+  document.getElementById("w10btn").addEventListener("click",function(){on=!on;target=on?-(+sa.value)*Math.PI/180:0;this.textContent=on?"disposition 1 : angles bruts":"disposition 2 : poser a sur l'axe";if(raf)cancelAnimationFrame(raf);anim();});
+  sa.addEventListener("input",()=>{if(on){phi=-(+sa.value)*Math.PI/180;target=phi;}draw();});
+  sb.addEventListener("input",draw);
+  draw();
+})();
+
+/* ---------- TOC scrollspy ---------- */
+(function(){
+  const links=[...document.querySelectorAll(".toc a")];
+  const secs=links.map(a=>document.querySelector(a.getAttribute("href")));
+  function spy(){let idx=0;const y=window.scrollY+120;secs.forEach((s,i)=>{if(s&&s.offsetTop<=y)idx=i;});links.forEach(l=>l.classList.remove("on"));if(links[idx])links[idx].classList.add("on");}
+  window.addEventListener("scroll",spy,{passive:true});spy();
+})();
+</script>
+</body>
+</html>
